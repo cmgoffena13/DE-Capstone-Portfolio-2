@@ -1,0 +1,54 @@
+services:
+  kafka:
+    image: bitnami/kafka:latest
+    container_name: kafka
+    volumes:
+      - KAFKA-DATA:/bitnami/kafka
+    ports:
+      - "9092:9092"    # Client connections
+      - "9093:9093"    # Internal controller communication
+    environment:
+      # Create a unique cluster ID
+      - KAFKA_KRAFT_CLUSTER_ID=4L6g3nShT-eMCtK--X86sw
+      # Enable KRaft mode: specify the roles for this node (broker and controller)
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      # A unique identifier for this node in the cluster
+      - KAFKA_CFG_NODE_ID=1
+      # Specify the controller quorum (here, a single node with ID 1)
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      # Define listeners:
+      # - PLAINTEXT for client connections on port 9092
+      # - CONTROLLER for internal communication on port 9093
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      # Map listener names to security protocols
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      # Tell Kafka which listener to use for inter-broker communication
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      # Specify the controller listener name
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      # Allow plaintext (non-TLS) connections (for development only)
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "8080:8080"
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAP_SERVERS=kafka:9092
+    depends_on:
+      - kafka
+      
+  producer:
+    build:
+      context: ./scripts
+    container_name: producer
+    depends_on:
+      - kafka
+    environment:
+      - KAFKA_BROKER=kafka:9092
+
+volumes:
+  KAFKA-DATA:
+    name: kafka_data
