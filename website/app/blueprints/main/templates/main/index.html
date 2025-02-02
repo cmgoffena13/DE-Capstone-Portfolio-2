@@ -12,6 +12,7 @@
         <div class="col-md-6">
             <h2>Track Your Stocks</h2>
             <form action="{{ url_for('main.index') }}" method="POST">
+                {{ form.hidden_tag() }}
                 <label for="tickers">Enter Stock Tickers (comma-separated):</label>
                 <input type="text" id="tickers" name="tickers" class="form-control" placeholder="e.g. AAPL, TSLA, AMZN" required>
                 <button type="submit" class="btn btn-primary mt-3">Start Tracking</button>

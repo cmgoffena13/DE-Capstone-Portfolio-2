@@ -16,7 +16,6 @@ def index():
     form = TickerForm()
     global ws_instance
     if form.validate_on_submit():
-        current_app.logger.debug("Submitted Form")
         tickers = form.tickers.data.split(",")
         formatted_tickers = ["AM." + ticker.strip() for ticker in tickers]
         try:

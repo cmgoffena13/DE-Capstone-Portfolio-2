@@ -11,6 +11,7 @@ class PolygonStream:
 
         self.app = app
         with self.app.app_context():
+            current_app.logger.debug("Initializing PolygonStream")
             producer_conf = {"bootstrap.servers": current_app.config["KAFKA_BROKER"]}
         self.producer = Producer(producer_conf)
         self.TOPIC = TOPIC
@@ -35,4 +36,6 @@ class PolygonStream:
         self.producer.flush()
 
     def start_websocket(self, ws):
+        with self.app.app_context():
+            current_app.logger.debug("Starting Stream...")
         ws.run(handle_msg=self._handle_msg)
