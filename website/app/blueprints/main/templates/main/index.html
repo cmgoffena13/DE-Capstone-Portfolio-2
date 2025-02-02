@@ -4,9 +4,18 @@
 
 {% block body %}
     <div class="col-md-6">
-        <h2>Stock Tracker</h2>
+        <h1>Stock Tracker</h1>
         <p class="fs-5">
             Hi there 👋, this is the stock tracker UI!
         </p>
+        <br>
+        <div class="col-md-6">
+            <h2>Track Your Stocks</h2>
+            <form action="{{ url_for('main.index') }}" method="POST">
+                <label for="tickers">Enter Stock Tickers (comma-separated):</label>
+                <input type="text" id="tickers" name="tickers" class="form-control" placeholder="e.g. AAPL, TSLA, AMZN" required>
+                <button type="submit" class="btn btn-primary mt-3">Start Tracking</button>
+            </form>
+        </div>
     </div>
 {% endblock%}
