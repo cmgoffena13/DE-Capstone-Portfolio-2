@@ -1,4 +1,5 @@
 from typing import List
+import threading
 
 from confluent_kafka import Producer
 from flask import current_app
@@ -36,6 +37,10 @@ class PolygonStream:
         self.producer.flush()
 
     def start_websocket(self, ws):
+        def run_ws():
+            with self.app.app_context():
+                current_app.logger.debug("Starting Stream...")
+            ws.run(handle_msg=self._handle_msg)
+        threading.Thread(target=run_ws).start()
         with self.app.app_context():
-            current_app.logger.debug("Starting Stream...")
-        ws.run(handle_msg=self._handle_msg)
+            current_app.logger.debug("Stream Started")

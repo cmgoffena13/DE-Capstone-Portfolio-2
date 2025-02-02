@@ -5,8 +5,8 @@ services:
     volumes:
       - KAFKA-DATA:/bitnami/kafka
     ports:
-      - "9092:9092"    # Client connections
-      - "9093:9093"    # Internal controller communication
+      - 9092:9092    # Client connections
+      - 9093:9093    # Internal controller communication
     environment:
       # Create a unique cluster ID
       - KAFKA_KRAFT_CLUSTER_ID=4L6g3nShT-eMCtK--X86sw
@@ -33,7 +33,7 @@ services:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
     ports:
-      - "8080:8080"
+      - 8080:8080
     environment:
       - KAFKA_CLUSTERS_0_NAME=local
       - KAFKA_CLUSTERS_0_BOOTSTRAP_SERVERS=kafka:9092
@@ -44,6 +44,8 @@ services:
     build:
       context: ./website
     container_name: producer
+    ports:
+      - 8000:8000
     depends_on:
       - kafka
     environment:
