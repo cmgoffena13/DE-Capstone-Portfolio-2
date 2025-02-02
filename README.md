@@ -32,14 +32,14 @@ This portfolio project is designed to showcase my ability to learn new technolog
 
 ## Technology Choices
 From a skillset perspective I am proficient in SQL and Python, which led me to choose these tools:
- - **Python**: easiest way to access Polygon's real-time websocket and The Guardian's API to get the data and send it to Kafka as a buffer
+ - **Python**: easiest way to access Polygon's real-time websocket and The Guardian's API to get the data and send it to Kafka as a buffer.
  - **Kafka**: a buffer to collect the results of the streams as a temporary storage. This is the de-facto tool for real-time message brokers. Checked out RabbitMQ but Kafka is better for real-time.
  - **Flink**: the de-facto tool for streaming with minimal latency. I had already worked with Spark, so I wanted to expand my skillset here.
  - **Iceberg**: Iceberg was created for streaming, gracefully handling appends. Works great with open source.
- - **Flask**: I am proficient in Flask web development and I wanted a web page so that I could easily adjust the stream inputs
- - **InfluxDB**: I wanted to originally use Prometheus, but Prometheus doesn't support inserting of data, just scraping websites. Needed a time-series database that supported inserts from Flink, so decided on the popular InfluxDB
+ - **Flask**: I am proficient in Flask web development and I wanted a web page so that I could easily adjust the stream inputs.
+ - **InfluxDB**: I wanted to originally use Prometheus, but Prometheus doesn't support inserting of data, just scraping websites. Needed a time-series database that supported inserts from Flink, so decided on the popular InfluxDB.
  - **Grafana**: Free dashboard tool designed for real-time data. I had already used Prometheus before, so it made sense to gain proficiency in Grafana since they work so well together.
- - **Docker**: great way to re-produce environments and easily create a network using docker-compose
+ - **Docker**: great way to re-produce environments and easily create a network using docker-compose.
 
 ## Initial Data Investigations - Polygon Websocket
 
