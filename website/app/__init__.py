@@ -2,11 +2,10 @@ import logging
 import os
 from logging.handlers import TimedRotatingFileHandler
 
-from flask import Flask, render_template
-
 from app.blueprints import main_bp
 from app.extensions import bootstrap
 from config.settings import Config
+from flask import Flask, render_template
 
 
 def create_app(config_class=Config):

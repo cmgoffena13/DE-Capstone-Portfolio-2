@@ -1,8 +1,7 @@
+from app.blueprints.main.forms import NewsForm, TickerForm
 from flask import Blueprint, current_app, flash, redirect, render_template, url_for
 from polygon import WebSocketClient
-
-from app.blueprints.main.forms import TickerForm, NewsForm
-from scripts.producer import PolygonStream, GuardianAPI
+from scripts.producer import GuardianAPI, PolygonStream
 
 main_bp = Blueprint(name="main", import_name=__name__, template_folder="templates")
 
@@ -35,7 +34,7 @@ def index():
         except Exception:
             flash("Failed to start tracking. Please try again later.", "danger")
         return redirect(url_for("main.index"))
-    
+
     if news_form.validate_on_submit():
         search = news_form.news.data
         try:
@@ -46,4 +45,8 @@ def index():
             flash("Failed to start tracking. Please try again later.", "danger")
         return redirect(url_for("main.index"))
 
-    return render_template(template_name_or_list="main/index.html", tickers_form=tickers_form, news_form=news_form)
+    return render_template(
+        template_name_or_list="main/index.html",
+        tickers_form=tickers_form,
+        news_form=news_form,
+    )

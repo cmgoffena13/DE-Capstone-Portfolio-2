@@ -1,12 +1,12 @@
-from typing import List
 import threading
-from datetime import date, datetime
-from scripts.utils import fetch_with_retries
 import time
+from datetime import date, datetime
+from typing import List
 
 from confluent_kafka import Producer
 from flask import current_app
 from polygon.websocket.models import WebSocketMessage
+from scripts.utils import fetch_with_retries
 
 
 class PolygonStream:
@@ -44,6 +44,7 @@ class PolygonStream:
             with self.app.app_context():
                 current_app.logger.debug("Starting Polygon Stream...")
             ws.run(handle_msg=self._handle_msg)
+
         threading.Thread(target=run_ws).start()
         with self.app.app_context():
             current_app.logger.debug("Polygon Stream Started")
@@ -63,13 +64,13 @@ class GuardianAPI:
         self.TOPIC = TOPIC
         self.SEARCH = SEARCH
         self.payload = {
-            'api-key': self.GUARDIAN_API_KEY,
-            'page-size': 10,
-            'section': 'us-news',
-            'q': self.SEARCH,
-            'from-date': date.today().strftime("%Y-%m-%d"),
-            'page': 1,
-            'order-by': 'oldest'
+            "api-key": self.GUARDIAN_API_KEY,
+            "page-size": 10,
+            "section": "us-news",
+            "q": self.SEARCH,
+            "from-date": date.today().strftime("%Y-%m-%d"),
+            "page": 1,
+            "order-by": "oldest",
         }
 
     def _delivery_report(self, err, m):
@@ -93,12 +94,14 @@ class GuardianAPI:
 
     def _update_date(self):
         formatted_date = date.today().strftime("%Y-%m-%d")
-        self.payload['from-date'] = formatted_date
+        self.payload["from-date"] = formatted_date
 
     def start_api_stream(self):
         def loop_api():
             # Initialize watermark so we don't add messages before the date.
-            watermark = datetime.now(datetime.timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+            watermark = datetime.now(datetime.timezone.utc).replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
             with self.app.app_context():
                 current_app.logger.debug(f"Watermark: {watermark}")
             # Start an infinite loop
@@ -106,35 +109,51 @@ class GuardianAPI:
                 with self.app.app_context():
                     current_app.logger.debug("Starting Guardian Stream...")
                 data = fetch_with_retries(url=self.api_url, params=self.payload)
-                records = data['response']['results']
+                records = data["response"]["results"]
                 with self.app.app_context():
-                    current_app.logger.debug("API Call Status: ", str(data['response']['status']))
+                    current_app.logger.debug(
+                        "API Call Status: ", str(data["response"]["status"])
+                    )
 
                 for record in records:
-                    timestamp = datetime.strptime(record['webPublicationDate'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=datetime.timezone.utc)
+                    timestamp = datetime.strptime(
+                        record["webPublicationDate"], "%Y-%m-%dT%H:%M:%SZ"
+                    ).replace(tzinfo=datetime.timezone.utc)
                     if timestamp > watermark:
                         watermark = timestamp
-                        self.producer.produce(self.TOPIC, record.encode("utf-8"), callback=self._delivery_report)
+                        self.producer.produce(
+                            self.TOPIC,
+                            record.encode("utf-8"),
+                            callback=self._delivery_report,
+                        )
                 self.producer.flush()
 
-                current_page = data['response']['currentPage']
-                total_pages = data['response']['pages']
+                current_page = data["response"]["currentPage"]
+                total_pages = data["response"]["pages"]
 
                 # Loop through the pages
                 while current_page < total_pages:
                     current_page += 1
                     with self.app.app_context():
-                        current_app.logger.debug("API Call Current Page: ", str(current_page))
-                    self.payload['page'] = current_page
+                        current_app.logger.debug(
+                            "API Call Current Page: ", str(current_page)
+                        )
+                    self.payload["page"] = current_page
 
                     data = fetch_with_retries(url=self.api_url, params=self.payload)
-                    records = data['response']['results']
+                    records = data["response"]["results"]
 
                     for record in records:
-                        timestamp = datetime.strptime(record['webPublicationDate'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=datetime.timezone.utc)
+                        timestamp = datetime.strptime(
+                            record["webPublicationDate"], "%Y-%m-%dT%H:%M:%SZ"
+                        ).replace(tzinfo=datetime.timezone.utc)
                         if timestamp > watermark:
                             watermark = timestamp
-                            self.producer.produce(self.TOPIC, record.encode("utf-8"), callback=self._delivery_report)
+                            self.producer.produce(
+                                self.TOPIC,
+                                record.encode("utf-8"),
+                                callback=self._delivery_report,
+                            )
                     self.producer.flush()
                 with self.app.app_context():
                     current_app.logger.debug("Waiting 15 Seconds...")
