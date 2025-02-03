@@ -33,6 +33,7 @@ This project utilizes Polygon's live stream and The Guardian's API to showcase r
     1. [Content Endpoint](#Content-Endpoint)
 5. [Website](#Website)
 6. [Threading](#Threading)
+7. [Watermarking](#Watermarking)
 
 ## Introduction
 This portfolio project is designed to showcase my ability to learn new technologies in regards to streaming. Almost every technology chosen in this project I had limited knowledge in. Each section is commentary on the project that includes my learnings along the way. Enjoy!
@@ -99,7 +100,7 @@ URL: https://content.guardianapis.com/search
 <sup>Initial thoughts: webTitle and webPublicationDate seem to be the most important data points. Status is important as well to check. Also have to be careful about search terms, I wanted the ecommerce Amazon, not the jungle. Looks like their is a sectionName that can be filtered for US activity only</sup>
 
 ## Website
-I decided early on that I wanted to create a web p**age to easily change the polygon and guardian query inputs. I ended up with a simple flask home page.
+I decided early on that I wanted to create a web page to easily change the polygon and guardian query inputs. I ended up with a simple flask home page.
 ![Website](website/app/static/README/stock_tracker.png "Website")
 
 ## Threading
@@ -115,3 +116,6 @@ One of the main issues I ran into while using the flask home page is when submit
         with self.app.app_context():
             current_app.logger.debug("Stream Started")
 ```
+
+## Watermarking
+One of the challenges with The Guardian's API is that it only allowed to search through articles for a specific date. That means I could continuously query the API, but I would keep getting old results. I utilized the `webPublicationDate` timestamp field in the results to ensure only new articles were added to the kafka topic by maintaining a watermark timestamp and comparing the two fields.
