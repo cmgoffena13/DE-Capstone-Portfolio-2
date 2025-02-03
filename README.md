@@ -54,7 +54,7 @@ From a skillset perspective I am proficient in SQL and Python, which led me to c
 I am already subscribed to some polygon endpoints and with that subscription comes access to their 15 min delay websocket. Polygon is a great data resource that I was excited to use again.
 
 ### Real-Time Websocket Feed
-Feed: <a>delayed.polygon.io</a>
+Feed: <a href="">delayed.polygon.io</a>
 
 **Results**
 ```json
