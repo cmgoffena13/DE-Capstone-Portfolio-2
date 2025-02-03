@@ -101,7 +101,7 @@ URL: https://content.guardianapis.com/search
 
 ## Website
 I decided early on that I wanted to create a web page to easily change the polygon and guardian query inputs. I ended up with a simple flask home page.
-![Website](website/app/static/README/stock_tracker.png "Website")
+![Website](website/app/static/README/stock_tracker_U.png "Website")
 
 ## Threading
 One of the main issues I ran into while using the flask home page is when submitting a form, the websocket held the main python thread, which never ended up reloading the page. I ended up with a simple solution to create a background thread for the websocket to have the web page load properly after a form submission.
