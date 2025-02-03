@@ -31,18 +31,20 @@ def index():
             s = PolygonStream(TOPIC="stock-prices")
             s.start_websocket(ws=ws_instance)
             flash("Tracking started successfully!", "success")
-        except Exception:
+        except Exception as e:
             flash("Failed to start tracking. Please try again later.", "danger")
+            current_app.logger.debug(f"Failed to start Polygon Stream: {e}")
         return redirect(url_for("main.index"))
 
     if news_form.validate_on_submit():
         search = news_form.news.data
         try:
-            GuardianAPI(TOPIC="news-articles", SEARCH=search)
-            GuardianAPI.start_api_stream()
+            s = GuardianAPI(TOPIC="news-articles", SEARCH=search)
+            s.start_api_stream()
             flash("Tracking started successfully!", "success")
-        except Exception:
+        except Exception as e:
             flash("Failed to start tracking. Please try again later.", "danger")
+            current_app.logger.debug(f"Failed to start Guardian Stream: {e}")
         return redirect(url_for("main.index"))
 
     return render_template(

@@ -1,6 +1,6 @@
 import threading
 import time
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import List
 
 from confluent_kafka import Producer
@@ -83,15 +83,6 @@ class GuardianAPI:
                     f"Message delivered to Kafka: {m.topic()} [{m.partition()}]"
                 )
 
-    def _handle_msg(self, msg: List[WebSocketMessage]):
-        for m in msg:
-            with self.app.app_context():
-                current_app.logger.debug(f"Received message from Guardian: {m}")
-            self.producer.produce(
-                self.TOPIC, m.encode("utf-8"), callback=self._delivery_report
-            )
-        self.producer.flush()
-
     def _update_date(self):
         formatted_date = date.today().strftime("%Y-%m-%d")
         self.payload["from-date"] = formatted_date
@@ -99,26 +90,23 @@ class GuardianAPI:
     def start_api_stream(self):
         def loop_api():
             # Initialize watermark so we don't add messages before the date.
-            watermark = datetime.now(datetime.timezone.utc).replace(
+            watermark = datetime.now(timezone.utc).replace(
                 hour=0, minute=0, second=0, microsecond=0
             )
             with self.app.app_context():
+                current_app.logger.debug("Starting Guardian Stream...")
                 current_app.logger.debug(f"Watermark: {watermark}")
             # Start an infinite loop
             while True:
-                with self.app.app_context():
-                    current_app.logger.debug("Starting Guardian Stream...")
                 data = fetch_with_retries(url=self.api_url, params=self.payload)
                 records = data["response"]["results"]
                 with self.app.app_context():
-                    current_app.logger.debug(
-                        "API Call Status: ", str(data["response"]["status"])
-                    )
+                    current_app.logger.debug(f"Records Grabbed: {records}")
 
                 for record in records:
                     timestamp = datetime.strptime(
                         record["webPublicationDate"], "%Y-%m-%dT%H:%M:%SZ"
-                    ).replace(tzinfo=datetime.timezone.utc)
+                    ).replace(tzinfo=timezone.utc)
                     if timestamp > watermark:
                         watermark = timestamp
                         self.producer.produce(
@@ -146,7 +134,7 @@ class GuardianAPI:
                     for record in records:
                         timestamp = datetime.strptime(
                             record["webPublicationDate"], "%Y-%m-%dT%H:%M:%SZ"
-                        ).replace(tzinfo=datetime.timezone.utc)
+                        ).replace(tzinfo=timezone.utc)
                         if timestamp > watermark:
                             watermark = timestamp
                             self.producer.produce(
