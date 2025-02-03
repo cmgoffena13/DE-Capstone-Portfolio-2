@@ -57,9 +57,26 @@ I am already subscribed to some polygon endpoints and with that subscription com
 Feed: <a href="">delayed.polygon.io</a>
 
 **Results**
-```json
-
+```python
+EquityAgg(
+    event_type="AM",
+    symbol="WMT",
+    volume=49893,
+    accumulated_volume=7266036,
+    official_open_price=96.77,
+    vwap=99.2916,
+    open=99.235,
+    close=99.38,
+    high=99.38,
+    low=99.233614,
+    aggregate_vwap=98.1625,
+    average_size=80,
+    start_timestamp=1738601460000,
+    end_timestamp=1738601520000,
+    otc=None,
+)
 ```
+<sup>Initial Thoughts: Given the start and end timestamps of the aggregation, can use the end timestamp as a watermark. Can see whether price went up or down during the time period as well. Aggregation is over a time frame of 1 minute. Noticed that the decimal placement can go pretty long.</sup>
 
 ## Initial Data Investigations - The Guardian API
 The guardian is a well-respected news outlet that focuses on the US. It offers a free API key for development/non-profit purposes. I've had my eye on The Guardian ever since they helped Edward Snowden get the word out about the NSA's surveillance activities. You can check out their platform <a href="https://open-platform.theguardian.com/">here</a>.
