@@ -28,7 +28,9 @@ This project utilizes Polygon's live stream and The Guardian's API to showcase r
 1. [Introduction](#Introduction)
 2. [Technology Choices](#Technology-Choices)
 3. [Initial Data Investigations - Polygon Websocket](#Initial-Data-Investigations---Polygon-Websocket)
+    1. [Real-Time Websocket Feed](#Real-Time-Websocket-Feed)
 4. [Initial Data Investigations - The Guardian API](#Initial-Data-Investigations---The-Guardian-API)
+    1. [Content Endpoint](#Content-Endpoint)
 5. [Website](#Website)
 6. [Threading](#Threading)
 
@@ -48,11 +50,56 @@ From a skillset perspective I am proficient in SQL and Python, which led me to c
  - **Docker**: great way to re-produce environments and easily create a network using docker-compose.
 
 ## Initial Data Investigations - Polygon Websocket
+I am already subscribed to some polygon endpoints and with that subscription comes access to their 15 min delay websocket. Polygon is a great data resource that I was excited to use again.
+
+### Real-Time Websocket Feed
+Feed: <a>delayed.polygon.io</a>
+
+**Results**
+```json
+
+```
 
 ## Initial Data Investigations - The Guardian API
+The guardian is a well-respected news outlet that focuses on the US. It offers a free API key for development/non-profit purposes. I've had my eye on The Guardian ever since they helped Edward Snowden get the word out about the NSA's surveillance activities.
+
+### Content Endpoint
+URL: https://content.guardianapis.com/search
+
+**Results**
+```json
+{
+  "response": {
+    "status": "ok",
+    "userTier": "developer",
+    "total": 28465,
+    "startIndex": 1,
+    "pageSize": 1,
+    "currentPage": 1,
+    "pages": 28465,
+    "orderBy": "relevance",
+    "results": [
+      {
+        "id": "global-development/2024/dec/22/exclusive-photographs-reveal-first-glimpse-of-uncontacted-amazon-community-massaco",
+        "type": "article",
+        "sectionId": "global-development",
+        "sectionName": "Global development",
+        "webPublicationDate": "2024-12-22T05:00:36Z",
+        "webTitle": "Photographs reveal first glimpse of uncontacted Amazon community",
+        "webUrl": "https://www.theguardian.com/global-development/2024/dec/22/exclusive-photographs-reveal-first-glimpse-of-uncontacted-amazon-community-massaco",
+        "apiUrl": "https://content.guardianapis.com/global-development/2024/dec/22/exclusive-photographs-reveal-first-glimpse-of-uncontacted-amazon-community-massaco",
+        "isHosted": False,
+        "pillarId": "pillar/news",
+        "pillarName": "News"
+      }
+    ]
+  }
+}
+```
+<sup>Initial thoughts: webTitle and webPublicationDate seem to be the most important data points. Status is important as well to check. Also have to be careful about search terms, I wanted the ecommerce Amazon, not the jungle. Looks like their is a sectionName that can be filtered for US activity only</sup>
 
 ## Website
-I decided early on that I wanted to create a web page to easily change the polygon and guardian query inputs. I ended up with a simple flask home page.
+I decided early on that I wanted to create a web p**age to easily change the polygon and guardian query inputs. I ended up with a simple flask home page.
 ![Website](website/app/static/README/stock_tracker.png "Website")
 
 ## Threading

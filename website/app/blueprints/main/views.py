@@ -1,8 +1,8 @@
 from flask import Blueprint, current_app, flash, redirect, render_template, url_for
 from polygon import WebSocketClient
 
-from app.blueprints.main.forms import TickerForm
-from scripts.producer import PolygonStream
+from app.blueprints.main.forms import TickerForm, NewsForm
+from scripts.producer import PolygonStream, GuardianAPI
 
 main_bp = Blueprint(name="main", import_name=__name__, template_folder="templates")
 
@@ -13,10 +13,11 @@ ws_instance = None
 @main_bp.route("/index", methods=["GET", "POST"])
 @main_bp.route("/", methods=["GET", "POST"])
 def index():
-    form = TickerForm()
+    tickers_form = TickerForm()
+    news_form = NewsForm()
     global ws_instance
-    if form.validate_on_submit():
-        tickers = form.tickers.data.split(",")
+    if tickers_form.validate_on_submit():
+        tickers = tickers_form.tickers.data.split(",")
         formatted_tickers = ["AM." + ticker.strip() for ticker in tickers]
         try:
             if ws_instance:
@@ -34,4 +35,15 @@ def index():
         except Exception:
             flash("Failed to start tracking. Please try again later.", "danger")
         return redirect(url_for("main.index"))
-    return render_template(template_name_or_list="main/index.html", form=form)
+    
+    if news_form.validate_on_submit():
+        search = news_form.news.data
+        try:
+            GuardianAPI(TOPIC="news-articles", SEARCH=search)
+            GuardianAPI.start_api_stream()
+            flash("Tracking started successfully!", "success")
+        except Exception:
+            flash("Failed to start tracking. Please try again later.", "danger")
+        return redirect(url_for("main.index"))
+
+    return render_template(template_name_or_list="main/index.html", tickers_form=tickers_form, news_form=news_form)

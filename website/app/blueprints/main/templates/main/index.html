@@ -3,20 +3,44 @@
 {% block heading %}<h2 class="text-center mb-3"></h2>{% endblock %}
 
 {% block body %}
-    <div class="col-md-6">
-        <h1>Stock Tracker</h1>
-        <p class="fs-5">
-            Hi there 👋, this is the stock tracker UI!
-        </p>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6">
+                <h1>Stock Tracker</h1>
+                <p class="fs-5">
+                    Hi there 👋, this is the stock tracker UI! Track stock tickers and The Guardian's news articles!
+                </p>
+            </div>
+        </div>
         <br>
-        <div class="col-md-6">
-            <h2>Track Your Stocks</h2>
-            <form action="{{ url_for('main.index') }}" method="POST">
-                {{ form.hidden_tag() }}
-                <label for="tickers">Enter Stock Tickers (comma-separated):</label>
-                <input type="text" id="tickers" name="tickers" class="form-control" placeholder="e.g. AAPL, TSLA, AMZN" required>
-                <button type="submit" class="btn btn-primary mt-3">Start Tracking</button>
-            </form>
+        <div class="row">
+            <div class="col-md-6">
+                <h2>Track Your Stocks</h2>
+                <form action="{{ url_for('main.index') }}" method="POST">
+                    {{ tickers_form.hidden_tag() }}
+                    <label for="tickers">Enter Stock Tickers (comma-separated):</label>
+                    <input type="text" id="tickers" name="tickers" class="form-control" placeholder="e.g. AAPL, TSLA, AMZN" required>
+                    <button type="submit" class="btn btn-primary mt-3">Start Tracking</button>
+                </form>
+            </div>
+            <div class="col-md-6">
+                <h2>Track the News</h2>
+                <form action="{{ url_for('main.index') }}" method="POST">
+                    {{ news_form.hidden_tag() }}
+                    <label for="news">Enter a News Search Term:</label>
+                    <input type="text" id="news" name="news" class="form-control" placeholder="e.g. Trump" required>
+                    <button type="submit" class="btn btn-primary mt-3">Submit</button>
+                    <br><br>
+                    <p>Documentation</p>
+                    <ul>
+                        <li>Fuzzy Matching: sausage</li>
+                        <li>Exact Matching: "sausage"</li>
+                        <li>Multiple: sausages AND chips</li>
+                        <li>Or: sausages AND (mash OR chips)</li>
+                        <li>Not: sausages AND NOT (saveloy OR battered)</li>
+                    </ul>
+                </form>
+            </div>
         </div>
     </div>
 {% endblock%}

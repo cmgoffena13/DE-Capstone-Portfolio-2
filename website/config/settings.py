@@ -16,5 +16,6 @@ class Config(object):
     SECRET_KEY = os.environ.get("SECRET_KEY", "12345")
 
     POLYGON_API_KEY = os.environ.get("POLYGON_API_KEY")
+    GUARDIAN_API_KEY = os.environ.get("GUARDIAN_API_KEY")
 
     KAFKA_BROKER = os.getenv("KAFKA_BROKER", "kafka:9092")
