@@ -1,3 +1,4 @@
+import json
 import threading
 import time
 from datetime import date, datetime, timezone
@@ -6,7 +7,7 @@ from typing import List
 from confluent_kafka import Producer
 from flask import current_app
 from polygon.websocket.models import WebSocketMessage
-from scripts.utils import fetch_with_retries
+from scripts.utils import equity_agg_to_json, fetch_with_retries
 
 
 class PolygonStream:
@@ -27,15 +28,16 @@ class PolygonStream:
         else:
             with self.app.app_context():
                 current_app.logger.debug(
-                    f"Message delivered to Kafka: {m.topic()} [{m.partition()}]"
+                    f"Message delivered to Kafka. Topic: {m.topic()}; Partition: {m.partition()}"
                 )
 
     def _handle_msg(self, msg: List[WebSocketMessage]):
         for m in msg:
-            with self.app.app_context():
-                current_app.logger.debug(f"Received message from Polygon: {m}")
             self.producer.produce(
-                self.TOPIC, m.encode("utf-8"), callback=self._delivery_report
+                self.TOPIC,
+                key=m.symbol,
+                value=equity_agg_to_json(equity_agg=m),
+                callback=self._delivery_report,
             )
         self.producer.flush()
 
@@ -80,7 +82,7 @@ class GuardianAPI:
         else:
             with self.app.app_context():
                 current_app.logger.debug(
-                    f"Message delivered to Kafka: {m.topic()} [{m.partition()}]"
+                    f"Message delivered to Kafka. Topic: {m.topic()}; Partition: {m.partition()}"
                 )
 
     def _update_date(self):
@@ -95,13 +97,10 @@ class GuardianAPI:
             )
             with self.app.app_context():
                 current_app.logger.debug("Starting Guardian Stream...")
-                current_app.logger.debug(f"Watermark: {watermark}")
             # Start an infinite loop
             while True:
                 data = fetch_with_retries(url=self.api_url, params=self.payload)
                 records = data["response"]["results"]
-                with self.app.app_context():
-                    current_app.logger.debug(f"Records Grabbed: {records}")
 
                 for record in records:
                     timestamp = datetime.strptime(
@@ -111,7 +110,8 @@ class GuardianAPI:
                         watermark = timestamp
                         self.producer.produce(
                             self.TOPIC,
-                            record.encode("utf-8"),
+                            key=self.SEARCH,
+                            value=json.dumps(record).encode("utf-8"),
                             callback=self._delivery_report,
                         )
                 self.producer.flush()
@@ -124,7 +124,7 @@ class GuardianAPI:
                     current_page += 1
                     with self.app.app_context():
                         current_app.logger.debug(
-                            "API Call Current Page: ", str(current_page)
+                            f"API Call Current Page: {current_page}"
                         )
                     self.payload["page"] = current_page
 
@@ -139,13 +139,11 @@ class GuardianAPI:
                             watermark = timestamp
                             self.producer.produce(
                                 self.TOPIC,
-                                record.encode("utf-8"),
+                                key=self.SEARCH,
+                                value=json.dumps(record).encode("utf-8"),
                                 callback=self._delivery_report,
                             )
                     self.producer.flush()
-                with self.app.app_context():
-                    current_app.logger.debug("Waiting 15 Seconds...")
-                    current_app.logger.debug(f"Watermark: {watermark}")
                 time.sleep(15)
                 self._update_date()
 

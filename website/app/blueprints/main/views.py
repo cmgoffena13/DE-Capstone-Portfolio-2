@@ -1,3 +1,5 @@
+import asyncio
+
 from app.blueprints.main.forms import NewsForm, TickerForm
 from flask import Blueprint, current_app, flash, redirect, render_template, url_for
 from polygon import WebSocketClient
@@ -19,8 +21,12 @@ def index():
         tickers = tickers_form.tickers.data.split(",")
         formatted_tickers = ["AM." + ticker.strip() for ticker in tickers]
         try:
+
             if ws_instance:
-                ws_instance.stop()
+                current_app.logger.debug("Stopping Polygon Stream...")
+                asyncio.ensure_future(
+                    ws_instance.close()
+                )  # close method is asynchronous
 
             ws_instance = WebSocketClient(
                 api_key=current_app.config["POLYGON_API_KEY"],
