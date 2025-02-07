@@ -51,22 +51,38 @@ services:
     environment:
       - KAFKA_BROKER=kafka:9092
 
-  flink:
-    image: flink:latest
-    container_name: flink
-    command: jobmanager
+  jobmanager:
+    build:
+      context: .
+      dockerfile: flink/Dockerfile
+    container_name: jobmanager
+    hostname: jobmanager
+    volumes:
+      - ./website/scripts:/opt/src/job
     ports:
-      - "8081:8081"
+      - 8081:8081
+      - 6123:6123
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: jobmanager
+    command: jobmanager
 
   taskmanager:
-    image: flink:latest
+    build:
+      context: .
+      dockerfile: flink/Dockerfile
     container_name: taskmanager
-    command: taskmanager
+    volumes:
+      - C:\Users\Cortl\repos\DE-Capstone-Portfolio-2\website\scripts:/opt/src/job
     depends_on:
-      - flink
+      - jobmanager
     environment:
-      - JOB_MANAGER_RPC_ADDRESS=flink
-      - TASK_MANAGER_NUMBER_OF_TASK_SLOTS=4
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: jobmanager
+        taskmanager.numberOfTaskSlots: 4
+    command: taskmanager
 
   influxdb:
     image: influxdb:latest
@@ -82,7 +98,8 @@ services:
       - INFLUXDB-DATA:/var/lib/influxdb
     depends_on:
       - kafka
-      - flink
+      - jobmanager
+      - taskmanager
 
 volumes:
   KAFKA-DATA:

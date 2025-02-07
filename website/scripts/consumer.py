@@ -76,6 +76,7 @@ def create_stock_prices_source_kafka(t_env):
             'format' = 'json'
         );
     """
+    print(source_ddl)
     t_env.execute_sql(source_ddl)
     return "stock_prices"
 
@@ -110,6 +111,7 @@ def create_news_articles_source_kafka(t_env):
             'format' = 'json'
         );
     """
+    print(source_ddl)
     t_env.execute_sql(source_ddl)
     return "news_articles"
 
