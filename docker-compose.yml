@@ -51,6 +51,41 @@ services:
     environment:
       - KAFKA_BROKER=kafka:9092
 
+  flink:
+    image: flink:latest
+    container_name: flink
+    command: jobmanager
+    ports:
+      - "8081:8081"
+
+  taskmanager:
+    image: flink:latest
+    container_name: taskmanager
+    command: taskmanager
+    depends_on:
+      - flink
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=flink
+      - TASK_MANAGER_NUMBER_OF_TASK_SLOTS=4
+
+  influxdb:
+    image: influxdb:latest
+    container_name: influxdb
+    ports:
+      - 8086:8086
+    environment:
+      - INFLUXDB_DB=events
+      # - INFLUXDB_ADMIN_USER=admin
+      # - INFLUXDB_ADMIN_PASSWORD=password
+      - INFLUXDB_HTTP_AUTH_ENABLED=false  # No authentication
+    volumes:
+      - INFLUXDB-DATA:/var/lib/influxdb
+    depends_on:
+      - kafka
+      - flink
+
 volumes:
   KAFKA-DATA:
     name: kafka_data
+  INFLUXDB-DATA:
+    name: influxdb_data
