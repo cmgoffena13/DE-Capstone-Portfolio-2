@@ -59,6 +59,7 @@ services:
     hostname: jobmanager
     volumes:
       - ./website/scripts:/opt/src/job
+      - ./flink/start_flink.sh:/opt/src/start_flink.sh
     ports:
       - 8081:8081
       - 6123:6123
@@ -66,7 +67,7 @@ services:
       - |
         FLINK_PROPERTIES=
         jobmanager.rpc.address: jobmanager
-    command: jobmanager
+    command: ["/bin/bash", "/opt/src/start_flink.sh"]
 
   taskmanager:
     build:

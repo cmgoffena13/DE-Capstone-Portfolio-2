@@ -1,11 +1,14 @@
 from influxdb_client import InfluxDBClient, WriteOptions
 from pyflink.common.typeinfo import Types
-from pyflink.datastream import StreamExecutionEnvironment
-from pyflink.datastream.functions import SinkFunction
+from pyflink.datastream import (
+    ProcessFunction,
+    RuntimeContext,
+    StreamExecutionEnvironment,
+)
 from pyflink.table import EnvironmentSettings, StreamTableEnvironment
 
 
-class GenericInfluxDBSink(SinkFunction):
+class InfluxDBSink(ProcessFunction):
     def __init__(self, url, bucket, measurement, tag_key):
         self.url = url
         self.bucket = bucket
@@ -14,18 +17,13 @@ class GenericInfluxDBSink(SinkFunction):
         self.client = None
         self.write_api = None
 
-    def open(self, context):
-        """Initialize the InfluxDB client when the sink starts."""
+    def open(self, context: RuntimeContext):
         self.client = InfluxDBClient(url=self.url, token=None, org=None)
         self.write_api = self.client.write_api(
             write_options=WriteOptions(synchronous=True)
         )
 
-    def invoke(self, value, context):
-        """Write each record to InfluxDB."""
-        if not self.write_api:
-            raise RuntimeError("InfluxDB client is not initialized.")
-
+    def process_element(self, value, context: "ProcessFunction.Context"):
         point = {
             "measurement": self.measurement,
             "tags": {self.tag_key: value[self.tag_key]},
@@ -34,12 +32,13 @@ class GenericInfluxDBSink(SinkFunction):
                 for k, v in value.items()
                 if k != "event_timestamp"
             },
-            "time": int(value["event_timestamp"].timestamp() * 1000),
+            "time": int(
+                value["event_timestamp"].timestamp() * 1000
+            ),  # Convert timestamp
         }
         self.write_api.write(bucket=self.bucket, record=point)
 
     def close(self):
-        """Close the InfluxDB client when the sink stops."""
         if self.client:
             self.client.close()
 
@@ -47,9 +46,8 @@ class GenericInfluxDBSink(SinkFunction):
 def create_influxdb_sink(data_stream, measurement, tag_key):
     influxdb_url = "http://influxdb:8086"
     bucket = "events"
-
-    influx_sink = GenericInfluxDBSink(influxdb_url, bucket, measurement, tag_key)
-    data_stream.add_sink(influx_sink)
+    influx_sink = InfluxDBSink(influxdb_url, bucket, measurement, tag_key)
+    data_stream.process(influx_sink)
 
 
 def create_stock_prices_source_kafka(t_env):
@@ -62,18 +60,18 @@ def create_stock_prices_source_kafka(t_env):
             symbol VARCHAR,
             volume INT,
             accumulated_volume INT,
-            official_open_price DECIMAL(20,4),
-            vwap DECIMAL(20,4),
-            `open` DECIMAL(20,4),
-            `close` DECIMAL(20,4),
-            high DECIMAL(20,4),
-            low DECIMAL(20,4),
-            aggregate_vwap DECIMAL(20,4),
+            official_open_price DOUBLE,
+            vwap DOUBLE,
+            `open` DOUBLE,
+            `close` DOUBLE,
+            high DOUBLE,
+            low DOUBLE,
+            aggregate_vwap DOUBLE,
             average_size INT,
             start_timestamp BIGINT,
             end_timestamp BIGINT,
             otc VARCHAR,
-            event_timestamp AS FROM_UNIXTIME(end_timestamp / 1000)
+            event_timestamp AS CAST(FROM_UNIXTIME(end_timestamp / 1000) AS TIMESTAMP(3))
         ) WITH (
             'connector' = 'kafka',
             'properties.bootstrap.servers' = '{kafka_url}',
@@ -126,7 +124,7 @@ def create_news_articles_source_kafka(t_env):
 def event_processing():
     env = StreamExecutionEnvironment.get_execution_environment()
     env.enable_checkpointing(10 * 1000)
-    env.set_parallelism(2)  # Can increase
+    env.set_parallelism(1)  # Can increase
 
     settings = EnvironmentSettings.new_instance().in_streaming_mode().build()
 
@@ -164,13 +162,13 @@ def event_processing():
             Types.STRING(),
             Types.INT(),
             Types.INT(),
-            Types.BIG_DEC(),
-            Types.BIG_DEC(),
-            Types.BIG_DEC(),
-            Types.BIG_DEC(),
-            Types.BIG_DEC(),
-            Types.BIG_DEC(),
-            Types.BIG_DEC(),
+            Types.DOUBLE(),
+            Types.DOUBLE(),
+            Types.DOUBLE(),
+            Types.DOUBLE(),
+            Types.DOUBLE(),
+            Types.DOUBLE(),
+            Types.DOUBLE(),
             Types.INT(),
             Types.LONG(),
             Types.LONG(),
@@ -226,7 +224,7 @@ def event_processing():
         data_stream=news_articles_stream, measurement="news_articles", tag_key="search"
     )
 
-    t_env.execute("Kafka to InfluxDB")
+    env.execute("Kafka to InfluxDB")
 
 
 if __name__ == "__main__":
