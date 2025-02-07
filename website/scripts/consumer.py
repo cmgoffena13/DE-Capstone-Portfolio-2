@@ -1,5 +1,5 @@
-from influxdb_client import InfluxDBClient
-from influxdb_client.client.write_api import SYNCHRONOUS
+from influxdb_client import InfluxDBClient, WriteOptions
+from pyflink.common.typeinfo import Types
 from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.datastream.functions import SinkFunction
 from pyflink.table import EnvironmentSettings, StreamTableEnvironment
@@ -7,16 +7,25 @@ from pyflink.table import EnvironmentSettings, StreamTableEnvironment
 
 class GenericInfluxDBSink(SinkFunction):
     def __init__(self, url, bucket, measurement, tag_key):
-        self.client = InfluxDBClient(url=url, token=None, org=None)
-        self.write_api = self.client.write_api(write_options=SYNCHRONOUS)
+        self.url = url
         self.bucket = bucket
         self.measurement = measurement
         self.tag_key = tag_key
+        self.client = None
+        self.write_api = None
+
+    def open(self, context):
+        """Initialize the InfluxDB client when the sink starts."""
+        self.client = InfluxDBClient(url=self.url, token=None, org=None)
+        self.write_api = self.client.write_api(
+            write_options=WriteOptions(synchronous=True)
+        )
 
     def invoke(self, value, context):
-        """
-        Convert Flink records to InfluxDB points and write them.
-        """
+        """Write each record to InfluxDB."""
+        if not self.write_api:
+            raise RuntimeError("InfluxDB client is not initialized.")
+
         point = {
             "measurement": self.measurement,
             "tags": {self.tag_key: value[self.tag_key]},
@@ -30,24 +39,23 @@ class GenericInfluxDBSink(SinkFunction):
         self.write_api.write(bucket=self.bucket, record=point)
 
     def close(self):
-        self.client.close()
+        """Close the InfluxDB client when the sink stops."""
+        if self.client:
+            self.client.close()
 
 
 def create_influxdb_sink(data_stream, measurement, tag_key):
     influxdb_url = "http://influxdb:8086"
     bucket = "events"
 
-    data_stream.add_sink(
-        GenericInfluxDBSink(influxdb_url, bucket, measurement, tag_key)
-    )
+    influx_sink = GenericInfluxDBSink(influxdb_url, bucket, measurement, tag_key)
+    data_stream.add_sink(influx_sink)
 
 
 def create_stock_prices_source_kafka(t_env):
-    kafka_url = "kafka:9092"  # Kafka service inside Docker Compose, using the service name 'kafka'
-    topic = "stock-prices"  # Topic name
-    pattern = "yyyy-MM-dd''T''HH:mm:ss.SS''Z''"
+    kafka_url = "kafka:9092"
+    topic = "stock-prices"
 
-    # Define the source table creation DDL for the stock-prices topic
     source_ddl = f"""
         CREATE TABLE stock_prices (
             event_type VARCHAR,
@@ -56,8 +64,8 @@ def create_stock_prices_source_kafka(t_env):
             accumulated_volume INT,
             official_open_price DECIMAL(20,4),
             vwap DECIMAL(20,4),
-            open DECIMAL(20,4),
-            close DECIMAL(20,4),
+            `open` DECIMAL(20,4),
+            `close` DECIMAL(20,4),
             high DECIMAL(20,4),
             low DECIMAL(20,4),
             aggregate_vwap DECIMAL(20,4),
@@ -65,7 +73,7 @@ def create_stock_prices_source_kafka(t_env):
             start_timestamp BIGINT,
             end_timestamp BIGINT,
             otc VARCHAR,
-            event_timestamp AS TO_TIMESTAMP(end_timestamp, '{pattern}')
+            event_timestamp AS FROM_UNIXTIME(end_timestamp / 1000)
         ) WITH (
             'connector' = 'kafka',
             'properties.bootstrap.servers' = '{kafka_url}',
@@ -76,17 +84,16 @@ def create_stock_prices_source_kafka(t_env):
             'format' = 'json'
         );
     """
-    print(source_ddl)
+    print("Executing SQL: ", source_ddl)
     t_env.execute_sql(source_ddl)
     return "stock_prices"
 
 
 def create_news_articles_source_kafka(t_env):
-    kafka_url = "kafka:9092"  # Kafka service inside Docker Compose, using the service name 'kafka'
-    topic = "news-articles"  # Topic name
-    pattern = "yyyy-MM-dd''T''HH:mm:ss.SS''Z''"  # Timestamp format for event_timestamp
+    kafka_url = "kafka:9092"
+    topic = "news-articles"
+    pattern = "yyyy-MM-dd''T''HH:mm:ss.SS''Z''"
 
-    # Define the source table creation DDL for the stock-prices topic
     source_ddl = f"""
         CREATE TABLE news_articles (
             id VARCHAR,
@@ -111,7 +118,7 @@ def create_news_articles_source_kafka(t_env):
             'format' = 'json'
         );
     """
-    print(source_ddl)
+    print("Executing SQL: ", source_ddl)
     t_env.execute_sql(source_ddl)
     return "news_articles"
 
@@ -129,18 +136,97 @@ def event_processing():
     news_articles_source = create_news_articles_source_kafka(t_env=t_env)
 
     # Convert Flink tables to data streams
-    stock_prices_stream = t_env.from_path(stock_prices_source)
-    news_articles_stream = t_env.from_path(news_articles_source)
+    stock_prices_table = t_env.from_path(stock_prices_source)
+    news_articles_table = t_env.from_path(news_articles_source)
+
+    # Declare stream schema (kind of lame)
+    stock_prices_type_info = Types.ROW_NAMED(
+        [
+            "event_type",
+            "symbol",
+            "volume",
+            "accumulated_volume",
+            "official_open_price",
+            "vwap",
+            "open",
+            "close",
+            "high",
+            "low",
+            "aggregate_vwap",
+            "average_size",
+            "start_timestamp",
+            "end_timestamp",
+            "otc",
+            "event_timestamp",
+        ],
+        [
+            Types.STRING(),
+            Types.STRING(),
+            Types.INT(),
+            Types.INT(),
+            Types.BIG_DEC(),
+            Types.BIG_DEC(),
+            Types.BIG_DEC(),
+            Types.BIG_DEC(),
+            Types.BIG_DEC(),
+            Types.BIG_DEC(),
+            Types.BIG_DEC(),
+            Types.INT(),
+            Types.LONG(),
+            Types.LONG(),
+            Types.STRING(),
+            Types.SQL_TIMESTAMP(),
+        ],
+    )
+
+    news_articles_type_info = Types.ROW_NAMED(
+        [
+            "id",
+            "type",
+            "sectionId",
+            "sectionName",
+            "webPublicationDate",
+            "webTitle",
+            "webUrl",
+            "apiUrl",
+            "isHosted",
+            "pillarId",
+            "pillarName",
+            "event_timestamp",
+        ],
+        [
+            Types.STRING(),
+            Types.STRING(),
+            Types.STRING(),
+            Types.STRING(),
+            Types.STRING(),
+            Types.STRING(),
+            Types.STRING(),
+            Types.STRING(),
+            Types.BOOLEAN(),
+            Types.STRING(),
+            Types.STRING(),
+            Types.SQL_TIMESTAMP(),
+        ],
+    )
+
+    # Convert tables to data streams
+    stock_prices_stream = t_env.to_append_stream(
+        stock_prices_table, type_info=stock_prices_type_info
+    )
+    news_articles_stream = t_env.to_append_stream(
+        news_articles_table, type_info=news_articles_type_info
+    )
 
     # Add sinks for both data streams
     create_influxdb_sink(
-        stock_prices_stream, measurement="stock_prices", tag_key="symbol"
+        data_stream=stock_prices_stream, measurement="stock_prices", tag_key="symbol"
     )
     create_influxdb_sink(
-        news_articles_stream, measurement="news_articles", tag_key="search"
+        data_stream=news_articles_stream, measurement="news_articles", tag_key="search"
     )
 
-    t_env.execute("Flink to InfluxDB")
+    t_env.execute("Kafka to InfluxDB")
 
 
 if __name__ == "__main__":
