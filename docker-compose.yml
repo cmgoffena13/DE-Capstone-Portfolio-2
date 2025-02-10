@@ -91,16 +91,15 @@ services:
     ports:
       - 8086:8086
     environment:
-      - INFLUXDB_DB=events
-      # - INFLUXDB_ADMIN_USER=admin
-      # - INFLUXDB_ADMIN_PASSWORD=password
-      - INFLUXDB_HTTP_AUTH_ENABLED=false  # No authentication
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=password
+      - DOCKER_INFLUXDB_INIT_ORG=NA
+      - DOCKER_INFLUXDB_INIT_BUCKET=events
+      - DOCKER_INFLUXDB_INIT_RETENTION=1d
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=abcdef
     volumes:
       - INFLUXDB-DATA:/var/lib/influxdb
-    depends_on:
-      - kafka
-      - jobmanager
-      - taskmanager
 
 volumes:
   KAFKA-DATA:

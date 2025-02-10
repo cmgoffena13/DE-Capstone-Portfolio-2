@@ -1,5 +1,9 @@
-from influxdb_client import InfluxDBClient, WriteOptions
+import os
+from os.path import abspath, dirname, join
+from influxdb_client import InfluxDBClient
+from influxdb_client.client.write_api import SYNCHRONOUS
 from pyflink.common.typeinfo import Types
+from pyflink.common.types import Row
 from pyflink.datastream import (
     ProcessFunction,
     RuntimeContext,
@@ -7,36 +11,53 @@ from pyflink.datastream import (
 )
 from pyflink.table import EnvironmentSettings, StreamTableEnvironment
 
+from dotenv import load_dotenv
+
+base_dir = abspath(dirname(__file__))
+load_dotenv(join(base_dir, ".env"))
+
+try: 
+    INFLUXDB_TOKEN = os.environ["INFLUXDB_TOKEN"]
+except KeyError:
+    raise KeyError(f"Missing. Path is: {base_dir} + /.env - Check for file existence")
 
 class InfluxDBSink(ProcessFunction):
-    def __init__(self, url, bucket, measurement, tag_key):
-        self.url = url
-        self.bucket = bucket
+    def __init__(self, measurement, tag_key):
+        self.url = "http://influxdb:8086"
+        self.bucket = "events"
+        self.org = "NA"
         self.measurement = measurement
         self.tag_key = tag_key
         self.client = None
         self.write_api = None
+        self.token = INFLUXDB_TOKEN
 
     def open(self, context: RuntimeContext):
-        self.client = InfluxDBClient(url=self.url, token=None, org=None)
+        self.client = InfluxDBClient(url=self.url, token=self.token, org=self.org)
         self.write_api = self.client.write_api(
-            write_options=WriteOptions(synchronous=True)
+            write_options=SYNCHRONOUS
         )
 
     def process_element(self, value, context: "ProcessFunction.Context"):
-        point = {
-            "measurement": self.measurement,
-            "tags": {self.tag_key: value[self.tag_key]},
-            "fields": {
-                k: float(v) if isinstance(v, (int, float)) else v
-                for k, v in value.items()
-                if k != "event_timestamp"
-            },
-            "time": int(
-                value["event_timestamp"].timestamp() * 1000
-            ),  # Convert timestamp
-        }
-        self.write_api.write(bucket=self.bucket, record=point)
+        if isinstance(value, Row):
+            row_dict = {field: value[field] for field in value.as_dict()}
+
+            point = {
+                "measurement": self.measurement,
+                "tags": {"event": self.tag_key},
+                "fields": {
+                    k: float(v) if isinstance(v, (int, float)) else v
+                    for k, v in row_dict.items()
+                    if k != "event_timestamp"
+                },
+                "time": int(
+                    row_dict["event_timestamp"].timestamp() * 1000
+                ) if row_dict.get("event_timestamp") else None,  # Convert timestamp
+            }
+
+            self.write_api.write(bucket=self.bucket, record=point)
+        else:
+            raise ValueError(f"Expected value to be a Row, but got {type(value)}. Received Value: {value}")
 
     def close(self):
         if self.client:
@@ -44,9 +65,7 @@ class InfluxDBSink(ProcessFunction):
 
 
 def create_influxdb_sink(data_stream, measurement, tag_key):
-    influxdb_url = "http://influxdb:8086"
-    bucket = "events"
-    influx_sink = InfluxDBSink(influxdb_url, bucket, measurement, tag_key)
+    influx_sink = InfluxDBSink(measurement, tag_key)
     data_stream.process(influx_sink)
 
 
@@ -90,7 +109,7 @@ def create_stock_prices_source_kafka(t_env):
 def create_news_articles_source_kafka(t_env):
     kafka_url = "kafka:9092"
     topic = "news-articles"
-    pattern = "yyyy-MM-dd''T''HH:mm:ss.SS''Z''"
+    pattern = "yyyy-MM-dd''T''HH:mm:ss''Z''"
 
     source_ddl = f"""
         CREATE TABLE news_articles (

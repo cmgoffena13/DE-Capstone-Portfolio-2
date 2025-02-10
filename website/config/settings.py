@@ -19,3 +19,5 @@ class Config(object):
     GUARDIAN_API_KEY = os.environ.get("GUARDIAN_API_KEY")
 
     KAFKA_BROKER = os.getenv("KAFKA_BROKER", "kafka:9092")
+
+    INFLUXDB_TOKEN = os.environ.get("INFLUXDB_TOKEN")
