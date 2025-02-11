@@ -1,6 +1,6 @@
 import os
 from os.path import abspath, dirname, join
-from influxdb_client import InfluxDBClient
+from influxdb_client import InfluxDBClient, Point
 from influxdb_client.client.write_api import SYNCHRONOUS
 from pyflink.common.typeinfo import Types
 from pyflink.common.types import Row
@@ -51,11 +51,14 @@ class InfluxDBSink(ProcessFunction):
                     if k != "event_timestamp"
                 },
                 "time": int(
-                    row_dict["event_timestamp"].timestamp() * 1000
+                    row_dict["event_timestamp"].timestamp() # * 1000000 # convert to nanoseconds
                 ) if row_dict.get("event_timestamp") else None,  # Convert timestamp
             }
-
-            self.write_api.write(bucket=self.bucket, record=point)
+            try:
+                p = Point.from_dict(dictionary=point)
+                self.write_api.write(bucket=self.bucket, record=p)
+            except Exception as e:
+                raise Exception(f"Error writing to InfluxDB: {e}; Failed record: {p}")
         else:
             raise ValueError(f"Expected value to be a Row, but got {type(value)}. Received Value: {value}")
 
@@ -90,7 +93,7 @@ def create_stock_prices_source_kafka(t_env):
             start_timestamp BIGINT,
             end_timestamp BIGINT,
             otc VARCHAR,
-            event_timestamp AS CAST(FROM_UNIXTIME(end_timestamp / 1000) AS TIMESTAMP(3))
+            event_timestamp AS end_timestamp
         ) WITH (
             'connector' = 'kafka',
             'properties.bootstrap.servers' = '{kafka_url}',

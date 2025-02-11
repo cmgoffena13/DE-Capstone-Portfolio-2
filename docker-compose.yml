@@ -59,6 +59,7 @@ services:
     hostname: jobmanager
     volumes:
       - ./website/scripts:/opt/src/job
+      - ./website/.env:/opt/src/job/.env
       - ./flink/start_flink.sh:/opt/src/start_flink.sh
     ports:
       - 8081:8081
@@ -96,7 +97,7 @@ services:
       - DOCKER_INFLUXDB_INIT_PASSWORD=password
       - DOCKER_INFLUXDB_INIT_ORG=NA
       - DOCKER_INFLUXDB_INIT_BUCKET=events
-      - DOCKER_INFLUXDB_INIT_RETENTION=1d
+      #- DOCKER_INFLUXDB_INIT_RETENTION=2d
       - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=abcdef
     volumes:
       - INFLUXDB-DATA:/var/lib/influxdb

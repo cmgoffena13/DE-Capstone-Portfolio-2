@@ -8,9 +8,9 @@ RUN apt-get update -y && \
 RUN ln -s /usr/bin/python3 /usr/bin/python
 
 # Copy requirements.txt from website directory
-COPY ../website/requirements.txt /tmp/requirements.txt
+COPY ./website/requirements.txt /tmp/requirements.txt
 # Copy .env file for InfluxDB Token
-COPY ../website/.env /opt/src/job/.env
+COPY ./website/.env /opt/src/job/.env
 
 # Install Python dependencies
 RUN python -m pip install --upgrade pip; \
