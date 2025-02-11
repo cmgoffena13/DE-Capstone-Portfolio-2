@@ -1,4 +1,5 @@
 import os
+import logging
 from os.path import abspath, dirname, join
 
 from dotenv import load_dotenv
@@ -12,6 +13,13 @@ from pyflink.datastream import (
     StreamExecutionEnvironment,
 )
 from pyflink.table import EnvironmentSettings, StreamTableEnvironment
+
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+
+logger = logging.getLogger(__name__)
 
 base_dir = abspath(dirname(__file__))
 load_dotenv(join(base_dir, ".env"))
@@ -34,34 +42,27 @@ class InfluxDBSink(ProcessFunction):
         self.token = INFLUXDB_TOKEN
 
     def open(self, context: RuntimeContext):
+        logger.info("Opening RunTimeContext...")
         self.client = InfluxDBClient(url=self.url, token=self.token, org=self.org)
         self.write_api = self.client.write_api(write_options=SYNCHRONOUS)
 
     def process_element(self, value, context: "ProcessFunction.Context"):
         if isinstance(value, Row):
             row_dict = {field: value[field] for field in value.as_dict()}
+            p = Point(self.measurement).tag("event", self.tag_key)
 
-            point = {
-                "measurement": self.measurement,
-                "tags": {"event": self.tag_key},
-                "fields": {
-                    k: float(v) if isinstance(v, (int, float)) else v
-                    for k, v in row_dict.items()
-                    if k != "event_timestamp"
-                },
-                "time": (
-                    int(
-                        row_dict[
-                            "event_timestamp"
-                        ].timestamp()  # * 1000000 # convert to nanoseconds
-                    )
-                    if row_dict.get("event_timestamp")
-                    else None
-                ),  # Convert timestamp
-            }
+            for k, v in row_dict.items():
+                if k == "event_timestamp":
+                    p.time(int(v.timestamp() * 1_000_000_000))  # Ensure nanosecond precision
+                elif isinstance(v, (int, float)):
+                    p.field(k, float(v))
+                else:
+                    p.field(k, str(v))
+
             try:
-                p = Point.from_dict(dictionary=point)
-                self.write_api.write(bucket=self.bucket, record=p)
+                logger.info(f"Writing record to InfluxDB, {self.bucket}: {p}")
+                self.write_api.write(bucket=self.bucket, org=self.org, record=p)
+                logger.info("Record written successfully.")
             except Exception as e:
                 raise Exception(f"Error writing to InfluxDB: {e}; Failed record: {p}")
         else:
@@ -71,10 +72,12 @@ class InfluxDBSink(ProcessFunction):
 
     def close(self):
         if self.client:
+            logger.info("Closing RunTimeContext...")
             self.client.close()
 
 
 def create_influxdb_sink(data_stream, measurement, tag_key):
+    logger.info("Starting InfluxDB Sink")
     influx_sink = InfluxDBSink(measurement, tag_key)
     data_stream.process(influx_sink)
 
@@ -100,7 +103,7 @@ def create_stock_prices_source_kafka(t_env):
             start_timestamp BIGINT,
             end_timestamp BIGINT,
             otc VARCHAR,
-            event_timestamp AS end_timestamp
+            event_timestamp AS CAST(FROM_UNIXTIME(end_timestamp / 1000) AS TIMESTAMP(3))
         ) WITH (
             'connector' = 'kafka',
             'properties.bootstrap.servers' = '{kafka_url}',
@@ -140,7 +143,7 @@ def create_news_articles_source_kafka(t_env):
             'properties.bootstrap.servers' = '{kafka_url}',
             'topic' = '{topic}',
             'properties.group.id' = 'flink-consumer',
-            'scan.startup.mode' = 'latest-offset',
+            'scan.startup.mode' = 'earliest-offset',
             'properties.auto.offset.reset' = 'latest',
             'format' = 'json'
         );
@@ -152,8 +155,8 @@ def create_news_articles_source_kafka(t_env):
 
 def event_processing():
     env = StreamExecutionEnvironment.get_execution_environment()
-    env.enable_checkpointing(10 * 1000)
-    env.set_parallelism(1)  # Can increase
+    # env.enable_checkpointing(10 * 1000)
+    env.set_parallelism(2)  # Can increase
 
     settings = EnvironmentSettings.new_instance().in_streaming_mode().build()
 
