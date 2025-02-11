@@ -1,5 +1,7 @@
 import os
 from os.path import abspath, dirname, join
+
+from dotenv import load_dotenv
 from influxdb_client import InfluxDBClient, Point
 from influxdb_client.client.write_api import SYNCHRONOUS
 from pyflink.common.typeinfo import Types
@@ -11,15 +13,14 @@ from pyflink.datastream import (
 )
 from pyflink.table import EnvironmentSettings, StreamTableEnvironment
 
-from dotenv import load_dotenv
-
 base_dir = abspath(dirname(__file__))
 load_dotenv(join(base_dir, ".env"))
 
-try: 
+try:
     INFLUXDB_TOKEN = os.environ["INFLUXDB_TOKEN"]
 except KeyError:
     raise KeyError(f"Missing. Path is: {base_dir} + /.env - Check for file existence")
+
 
 class InfluxDBSink(ProcessFunction):
     def __init__(self, measurement, tag_key):
@@ -34,9 +35,7 @@ class InfluxDBSink(ProcessFunction):
 
     def open(self, context: RuntimeContext):
         self.client = InfluxDBClient(url=self.url, token=self.token, org=self.org)
-        self.write_api = self.client.write_api(
-            write_options=SYNCHRONOUS
-        )
+        self.write_api = self.client.write_api(write_options=SYNCHRONOUS)
 
     def process_element(self, value, context: "ProcessFunction.Context"):
         if isinstance(value, Row):
@@ -50,9 +49,15 @@ class InfluxDBSink(ProcessFunction):
                     for k, v in row_dict.items()
                     if k != "event_timestamp"
                 },
-                "time": int(
-                    row_dict["event_timestamp"].timestamp() # * 1000000 # convert to nanoseconds
-                ) if row_dict.get("event_timestamp") else None,  # Convert timestamp
+                "time": (
+                    int(
+                        row_dict[
+                            "event_timestamp"
+                        ].timestamp()  # * 1000000 # convert to nanoseconds
+                    )
+                    if row_dict.get("event_timestamp")
+                    else None
+                ),  # Convert timestamp
             }
             try:
                 p = Point.from_dict(dictionary=point)
@@ -60,7 +65,9 @@ class InfluxDBSink(ProcessFunction):
             except Exception as e:
                 raise Exception(f"Error writing to InfluxDB: {e}; Failed record: {p}")
         else:
-            raise ValueError(f"Expected value to be a Row, but got {type(value)}. Received Value: {value}")
+            raise ValueError(
+                f"Expected value to be a Row, but got {type(value)}. Received Value: {value}"
+            )
 
     def close(self):
         if self.client:
