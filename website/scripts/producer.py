@@ -35,7 +35,7 @@ class PolygonStream:
         for m in msg:
             self.producer.produce(
                 self.TOPIC,
-                key=m.symbol,
+                key=m.symbol.encode("utf-8"),
                 value=equity_agg_to_json(equity_agg=m),
                 callback=self._delivery_report,
             )
@@ -110,7 +110,7 @@ class GuardianAPI:
                         watermark = timestamp
                         self.producer.produce(
                             self.TOPIC,
-                            key=self.SEARCH,
+                            key=self.SEARCH.encode("utf-8"),
                             value=json.dumps(record).encode("utf-8"),
                             callback=self._delivery_report,
                         )

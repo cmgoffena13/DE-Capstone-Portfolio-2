@@ -31,12 +31,11 @@ except KeyError:
 
 
 class InfluxDBSink(ProcessFunction):
-    def __init__(self, measurement, tag_key):
+    def __init__(self, measurement):
         self.url = "http://influxdb:8086"
         self.bucket = "events"
         self.org = "NA"
         self.measurement = measurement
-        self.tag_key = tag_key
         self.client = None
         self.write_api = None
         self.token = INFLUXDB_TOKEN
@@ -49,11 +48,14 @@ class InfluxDBSink(ProcessFunction):
     def process_element(self, value, context: "ProcessFunction.Context"):
         if isinstance(value, Row):
             row_dict = {field: value[field] for field in value.as_dict()}
-            p = Point(self.measurement).tag("event", self.tag_key)
+            p = Point(self.measurement)
 
             for k, v in row_dict.items():
                 if k == "event_timestamp":
                     p.time(int(v.timestamp() * 1_000_000_000))  # Ensure nanosecond precision
+                if k == "kafka_key":
+                    p.tag("key", str(v))
+                    logger.info(f"Kafka Key is: {v}")
                 elif isinstance(v, (int, float)):
                     p.field(k, float(v))
                 else:
@@ -76,9 +78,9 @@ class InfluxDBSink(ProcessFunction):
             self.client.close()
 
 
-def create_influxdb_sink(data_stream, measurement, tag_key):
+def create_influxdb_sink(data_stream, measurement):
     logger.info("Starting InfluxDB Sink")
-    influx_sink = InfluxDBSink(measurement, tag_key)
+    influx_sink = InfluxDBSink(measurement)
     data_stream.process(influx_sink)
 
 
@@ -88,6 +90,7 @@ def create_stock_prices_source_kafka(t_env):
 
     source_ddl = f"""
         CREATE TABLE stock_prices (
+            kafka_key VARCHAR,
             event_type VARCHAR,
             symbol VARCHAR,
             volume INT,
@@ -111,7 +114,10 @@ def create_stock_prices_source_kafka(t_env):
             'properties.group.id' = 'flink-consumer',
             'scan.startup.mode' = 'latest-offset',
             'properties.auto.offset.reset' = 'latest',
-            'format' = 'json'
+            'format' = 'json',
+            'key.format' = 'raw',
+            'key.fields' = 'kafka_key',
+            'key.fields-prefix' = ''
         );
     """
     print("Executing SQL: ", source_ddl)
@@ -126,6 +132,7 @@ def create_news_articles_source_kafka(t_env):
 
     source_ddl = f"""
         CREATE TABLE news_articles (
+            kafka_key VARCHAR,
             id VARCHAR,
             type VARCHAR,
             sectionId VARCHAR,
@@ -145,7 +152,10 @@ def create_news_articles_source_kafka(t_env):
             'properties.group.id' = 'flink-consumer',
             'scan.startup.mode' = 'earliest-offset',
             'properties.auto.offset.reset' = 'latest',
-            'format' = 'json'
+            'format' = 'json',
+            'key.format' = 'raw',
+            'key.fields' = 'kafka_key',
+            'key.fields-prefix' = ''
         );
     """
     print("Executing SQL: ", source_ddl)
@@ -172,6 +182,7 @@ def event_processing():
     # Declare stream schema (kind of lame)
     stock_prices_type_info = Types.ROW_NAMED(
         [
+            "kafka_key",
             "event_type",
             "symbol",
             "volume",
@@ -190,6 +201,7 @@ def event_processing():
             "event_timestamp",
         ],
         [
+            Types.STRING(),
             Types.STRING(),
             Types.STRING(),
             Types.INT(),
@@ -211,6 +223,7 @@ def event_processing():
 
     news_articles_type_info = Types.ROW_NAMED(
         [
+            "kafka_key",
             "id",
             "type",
             "sectionId",
@@ -225,6 +238,7 @@ def event_processing():
             "event_timestamp",
         ],
         [
+            Types.STRING(),
             Types.STRING(),
             Types.STRING(),
             Types.STRING(),
@@ -250,10 +264,10 @@ def event_processing():
 
     # Add sinks for both data streams
     create_influxdb_sink(
-        data_stream=stock_prices_stream, measurement="stock_prices", tag_key="symbol"
+        data_stream=stock_prices_stream, measurement="stock_prices"
     )
     create_influxdb_sink(
-        data_stream=news_articles_stream, measurement="news_articles", tag_key="search"
+        data_stream=news_articles_stream, measurement="news_articles"
     )
 
     env.execute("Kafka to InfluxDB")

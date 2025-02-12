@@ -34,6 +34,12 @@ This project utilizes Polygon's live stream and The Guardian's API to showcase r
 5. [Website](#Website)
 6. [Threading](#Threading)
 7. [Watermarking](#Watermarking)
+8. [Kafka](#Kafak)
+9. [Flink](#Flink)
+10. [InfluxDB](#InfluxDB)
+    1. [Flink Custom Sink](#Flink-Custom-Sink)
+    2. [InfluxDB Tags](#InfluxDB-Tags)
+
 
 ## Introduction
 This portfolio project is designed to showcase my ability to learn new technologies in regards to streaming. Almost every technology chosen in this project I had limited knowledge in. Each section is commentary on the project that includes my learnings along the way. Enjoy!
@@ -136,3 +142,15 @@ One of the main issues I ran into while using the flask home page is when submit
 
 ## Watermarking
 One of the challenges with The Guardian's API is that it only allowed to search through articles for a specific date. That means I could continuously query the API, but I would keep getting old results. I utilized the `webPublicationDate` timestamp field in the results to ensure only new articles were added to the kafka topic by maintaining a watermark timestamp and comparing the two fields.
+
+## Kafka
+
+## Flink
+
+## InfluxDB
+
+### Flink Custom Sink
+Unfortunately InfluxDB did not have an official Flink Connector, which meant I had to create my own. Ended up greatly expanding upon my knowledge of InfluxDB and how to use their Python SDK to create a custom sink.  
+
+### InfluxDB Tags
+Learned quite a lot about time-series databases and how important it is to know the difference beween `tags` and `labels` in InfluxDB. Tags are indexed and labels are not. Tags allow filtering to occur, such as filtering to a specific stock ticker while labels are additional data that can be attached, similar to dimension attributes. 
