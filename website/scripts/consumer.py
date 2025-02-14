@@ -173,12 +173,12 @@ def event_processing():
 
     t_env = StreamTableEnvironment.create(env, environment_settings=settings)
 
-    stock_prices_source = create_stock_prices_source_kafka(t_env=t_env)
-    news_articles_source = create_news_articles_source_kafka(t_env=t_env)
+    stock_prices_source_name = create_stock_prices_source_kafka(t_env=t_env)
+    news_articles_source_name = create_news_articles_source_kafka(t_env=t_env)
 
     # Convert Flink tables to data streams
-    stock_prices_table = t_env.from_path(stock_prices_source)
-    news_articles_table = t_env.from_path(news_articles_source)
+    stock_prices_table = t_env.from_path(stock_prices_source_name)
+    news_articles_table = t_env.from_path(news_articles_source_name)
 
     # Declare stream schema (kind of lame)
     stock_prices_type_info = Types.ROW_NAMED(

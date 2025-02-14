@@ -16,7 +16,7 @@ class PolygonStream:
 
         self.app = app
         with self.app.app_context():
-            current_app.logger.debug("Initializing PolygonStream")
+            current_app.logger.info("Initializing PolygonStream")
             producer_conf = {"bootstrap.servers": current_app.config["KAFKA_BROKER"]}
         self.producer = Producer(producer_conf)
         self.TOPIC = TOPIC
@@ -24,11 +24,12 @@ class PolygonStream:
     def _delivery_report(self, err, m):
         if err:
             with self.app.app_context():
-                current_app.logger.debug(f"Message delivery failed: {err}")
+                current_app.logger.info(f"Message delivery failed: {err}")
         else:
             with self.app.app_context():
-                current_app.logger.debug(
-                    f"Message delivered to Kafka. Topic: {m.topic()}; Partition: {m.partition()}"
+                current_app.logger.info(
+                    f"Message delivered to Kafka. Topic: {m.topic()}; Partition: {m.partition()}; "
+                    f"Key: {m.key()}; Message: {m.value()}"
                 )
 
     def _handle_msg(self, msg: List[WebSocketMessage]):
@@ -44,12 +45,12 @@ class PolygonStream:
     def start_websocket(self, ws):
         def run_ws():
             with self.app.app_context():
-                current_app.logger.debug("Starting Polygon Stream...")
+                current_app.logger.info("Starting Polygon Stream...")
             ws.run(handle_msg=self._handle_msg)
 
         threading.Thread(target=run_ws).start()
         with self.app.app_context():
-            current_app.logger.debug("Polygon Stream Started")
+            current_app.logger.info("Polygon Stream Started")
 
 
 class GuardianAPI:
@@ -58,7 +59,7 @@ class GuardianAPI:
 
         self.app = app
         with self.app.app_context():
-            current_app.logger.debug("Initializing GuardianAPI Stream")
+            current_app.logger.info("Initializing GuardianAPI Stream")
             producer_conf = {"bootstrap.servers": current_app.config["KAFKA_BROKER"]}
             self.GUARDIAN_API_KEY = current_app.config["GUARDIAN_API_KEY"]
         self.producer = Producer(producer_conf)
@@ -78,11 +79,12 @@ class GuardianAPI:
     def _delivery_report(self, err, m):
         if err:
             with self.app.app_context():
-                current_app.logger.debug(f"Message delivery failed: {err}")
+                current_app.logger.info(f"Message delivery failed: {err}")
         else:
             with self.app.app_context():
-                current_app.logger.debug(
-                    f"Message delivered to Kafka. Topic: {m.topic()}; Partition: {m.partition()}"
+                current_app.logger.info(
+                    f"Message delivered to Kafka. Topic: {m.topic()}; Partition: {m.partition()}; "
+                    f"Key: {m.key()}; Message: {m.value()}"
                 )
 
     def _update_date(self):
@@ -96,7 +98,7 @@ class GuardianAPI:
                 hour=0, minute=0, second=0, microsecond=0
             )
             with self.app.app_context():
-                current_app.logger.debug("Starting Guardian Stream...")
+                current_app.logger.info("Starting Guardian Stream...")
             # Start an infinite loop
             while True:
                 data = fetch_with_retries(url=self.api_url, params=self.payload)
@@ -123,7 +125,7 @@ class GuardianAPI:
                 while current_page < total_pages:
                     current_page += 1
                     with self.app.app_context():
-                        current_app.logger.debug(
+                        current_app.logger.info(
                             f"API Call Current Page: {current_page}"
                         )
                     self.payload["page"] = current_page
@@ -149,4 +151,4 @@ class GuardianAPI:
 
         threading.Thread(target=loop_api).start()
         with self.app.app_context():
-            current_app.logger.debug("Guardian Stream Started")
+            current_app.logger.info("Guardian Stream Started")

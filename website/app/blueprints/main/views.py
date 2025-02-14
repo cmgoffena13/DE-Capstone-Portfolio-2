@@ -21,7 +21,6 @@ def index():
         tickers = tickers_form.tickers.data.split(",")
         formatted_tickers = ["AM." + ticker.strip() for ticker in tickers]
         try:
-
             if ws_instance:
                 current_app.logger.debug("Stopping Polygon Stream...")
                 asyncio.ensure_future(
