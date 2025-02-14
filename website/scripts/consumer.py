@@ -1,5 +1,5 @@
-import os
 import logging
+import os
 from os.path import abspath, dirname, join
 
 from dotenv import load_dotenv
@@ -15,8 +15,7 @@ from pyflink.datastream import (
 from pyflink.table import EnvironmentSettings, StreamTableEnvironment
 
 logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 
 logger = logging.getLogger(__name__)
@@ -52,7 +51,9 @@ class InfluxDBSink(ProcessFunction):
 
             for k, v in row_dict.items():
                 if k == "event_timestamp":
-                    p.time(int(v.timestamp() * 1_000_000_000))  # Ensure nanosecond precision
+                    p.time(
+                        int(v.timestamp() * 1_000_000_000)
+                    )  # Ensure nanosecond precision
                 if k == "kafka_key":
                     p.tag("key", str(v))
                     logger.info(f"Kafka Key is: {v}")
@@ -263,12 +264,8 @@ def event_processing():
     )
 
     # Add sinks for both data streams
-    create_influxdb_sink(
-        data_stream=stock_prices_stream, measurement="stock_prices"
-    )
-    create_influxdb_sink(
-        data_stream=news_articles_stream, measurement="news_articles"
-    )
+    create_influxdb_sink(data_stream=stock_prices_stream, measurement="stock_prices")
+    create_influxdb_sink(data_stream=news_articles_stream, measurement="news_articles")
 
     env.execute("Kafka to InfluxDB")
 
