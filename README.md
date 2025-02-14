@@ -33,12 +33,21 @@ This project utilizes Polygon's live stream and The Guardian's API to showcase r
     1. [Content Endpoint](#Content-Endpoint)
 5. [Website](#Website)
 6. [Threading](#Threading)
-7. [Watermarking](#Watermarking)
+7. [API Watermarking](#API-Watermarking)
 8. [Kafka](#Kafak)
+    1. [Kraft Mode](#Kraft-Mode)
+    2. [Topics](#Topics)
+    3. [Keys / Partitions](#Keys-/-Partitions)
+    4. [Kafka Debugging](#Kafka-Debugging)
 9. [Flink](#Flink)
+    1. [Flink Tables](#Flink-Tables)
+    2. [Flink DataStreams](#Flink-DataStreams)
+    3. [Flink Debugging](#Flink-Debugging)
 10. [InfluxDB](#InfluxDB)
-    1. [Flink Custom Sink](#Flink-Custom-Sink)
-    2. [InfluxDB Tags](#InfluxDB-Tags)
+    1. [Point Schema](#Point-Schema)
+    2. [Flink Custom Sink](#Custom-Sink)
+    3. [InfluxDB Tags](#InfluxDB-Tags)
+11. [Conclusion](#Conclusion)
 
 
 ## Introduction
@@ -140,17 +149,47 @@ One of the main issues I ran into while using the flask home page is when submit
             current_app.logger.debug("Stream Started")
 ```
 
-## Watermarking
+## API Watermarking
 One of the challenges with The Guardian's API is that it only allowed to search through articles for a specific date. That means I could continuously query the API, but I would keep getting old results. I utilized the `webPublicationDate` timestamp field in the results to ensure only new articles were added to the kafka topic by maintaining a watermark timestamp and comparing the two fields.
 
 ## Kafka
 
+### Kraft Mode
+A Kafka cluster is traditionally managed by Zookeeper, but Kafka recently came out with K-raft mode, which allows a number of Kafka brokers to be a `controller`. One of theese brokers is elected as the leader, which coordinates the cluster and ensures proper failover.
+
+### Topics
+Kafka Topics are used to logically split up the data that Kafka stores. I created two topics: `stock-prices` and `news-articles` to ensure that the two real-time data sources I have were stored separately.
+
+### Keys / Partitions
+Kafka Partitioning allows for the splitting up of topics for parallelism and scalability. An optional identifier for a partition within a topic can be created/assigned as a key. The stock ticker or the search term was assigned as the key to ensure that data was being logically divided as a partition. This also allowed me to grab the partition key during Flink processing to properly tag the time-series data.
+
+### Kafka Debugging
+The Kafka UI was very helpful in seeing the status of the cluster, topics, partitions, and the messages themselves while developing.
+
 ## Flink
+I ended up having one Flink job to process the data from the Kafka Topics and insert it into InfluxDB. In retrospect, it makes sense to split up the tasks into multiple Flink jobs to minimize points of failure and unnecessary dependencies.
+
+### Flink Tables
+
+### Flink DataStreams
+
+### Flink Debugging
+Debugging Flink proved quite challenging due to not being able to run locally. Due to its distributed processing framework, a cluster needed spun up and the flink job submitted to test the job. A lot of logging was required to pinpoint the issues. The logging statements would show up in `jobmanager` if it dealt with SQL syntax or startup issues and in `taskmanager` if it dealt with the data processing. These can be viewed in docker or in the Flink UI.  
 
 ## InfluxDB
 
-### Flink Custom Sink
-Unfortunately InfluxDB did not have an official Flink Connector, which meant I had to create my own. Ended up greatly expanding upon my knowledge of InfluxDB and how to use their Python SDK to create a custom sink.  
+### Point Schema
+InfluxDB intakes a Point, which has a time in unix nanoseconds, multiple tags and multiple labels. It is important to make sure numbers were properly casted so that they could be visualized appropriately.
+
+Example Record:
+```
+
+```
+
+### Custom Sink
+Unfortunately InfluxDB did not have an official Flink Connector, which meant I had to create my own. Ended up greatly expanding upon my knowledge of InfluxDB and how to use their Python SDK to create a custom sink. 
 
 ### InfluxDB Tags
 Learned quite a lot about time-series databases and how important it is to know the difference beween `tags` and `labels` in InfluxDB. Tags are indexed and labels are not. Tags allow filtering to occur, such as filtering to a specific stock ticker while labels are additional data that can be attached, similar to dimension attributes. 
+
+## Conclusion
