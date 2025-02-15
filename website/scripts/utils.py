@@ -63,6 +63,7 @@ def equity_agg_to_json(equity_agg: EquityAgg):
     equity_agg_dict = asdict(equity_agg)
     return json.dumps(equity_agg_dict, indent=4).encode("utf-8")
 
+
 @dataclass
 class Article:
     id: str
@@ -81,11 +82,15 @@ class Article:
         for field_name, value in self.__dict__.items():
             if value is None:
                 raise ValueError(f"{field_name} cannot be None")
-            
+
+
 def article_to_json(article: Article):
     article_dict = asdict(article)
     return json.dumps(article_dict, indent=4).encode("utf-8")
 
+
 def dict_to_article(record: dict) -> Article:
-    filtered_record = {key: record[key] for key in Article.__annotations__.keys() if key in record}
+    filtered_record = {
+        key: record[key] for key in Article.__annotations__.keys() if key in record
+    }
     return Article(**filtered_record)

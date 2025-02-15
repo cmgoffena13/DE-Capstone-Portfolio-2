@@ -1,4 +1,3 @@
-import json
 import threading
 import time
 from datetime import date, datetime, timezone
@@ -7,7 +6,13 @@ from typing import List
 from confluent_kafka import Producer
 from flask import current_app
 from polygon.websocket.models import WebSocketMessage
-from scripts.utils import equity_agg_to_json, fetch_with_retries, dict_to_article, article_to_json, EquityAgg
+from scripts.utils import (
+    EquityAgg,
+    article_to_json,
+    dict_to_article,
+    equity_agg_to_json,
+    fetch_with_retries,
+)
 
 
 class PolygonStream:
@@ -111,7 +116,9 @@ class GuardianAPI:
                     if timestamp > watermark:
                         watermark = timestamp
                         record["search"] = self.SEARCH
-                        article = dict_to_article(record=record)  # convert to dataclass and validate
+                        article = dict_to_article(
+                            record=record
+                        )  # convert to dataclass and validate
                         self.producer.produce(
                             self.TOPIC,
                             key=self.SEARCH.encode("utf-8"),
@@ -142,7 +149,9 @@ class GuardianAPI:
                         if timestamp > watermark:
                             watermark = timestamp
                             record["search"] = self.SEARCH
-                            article = dict_to_article(record=record)  # convert to dataclass and validate
+                            article = dict_to_article(
+                                record=record
+                            )  # convert to dataclass and validate
                             self.producer.produce(
                                 self.TOPIC,
                                 key=self.SEARCH,

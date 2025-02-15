@@ -102,8 +102,23 @@ services:
     volumes:
       - INFLUXDB-DATA:/var/lib/influxdb
 
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - 3000:3000
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - GRAFANA-DATA:/var/lib/grafana
+    depends_on:
+      - influxdb
+
 volumes:
   KAFKA-DATA:
     name: kafka_data
   INFLUXDB-DATA:
     name: influxdb_data
+  GRAFANA-DATA:
+    name: grafana_data
