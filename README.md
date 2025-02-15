@@ -154,6 +154,7 @@ One of the main issues I ran into while using the flask home page is when submit
 One of the challenges with The Guardian's API is that it only allowed to search through articles for a specific date. That means I could continuously query the API, but I would keep getting old results. I utilized the `webPublicationDate` timestamp field in the results to ensure only new articles were added to the kafka topic by maintaining a watermark timestamp and comparing the two fields.
 
 ## Kafka
+![Kafka UI](website/app/static/README/kafka_ui.png "Kafka UI")
 
 ### Kraft Mode
 A Kafka cluster is traditionally managed by Zookeeper, but Kafka recently came out with K-raft mode, which allows a number of Kafka brokers to be a `controller`. One of theese brokers is elected as the leader, which coordinates the cluster and ensures proper failover.
@@ -169,6 +170,8 @@ The Kafka UI was very helpful in seeing the status of the cluster, topics, parti
 
 ## Flink
 I ended up having one Flink job to process the data from the Kafka Topics and insert it into InfluxDB. In retrospect, it makes sense to split up the tasks into multiple Flink jobs to minimize points of failure and unnecessary dependencies.
+
+![Flink UI](website/app/static/README/flink_ui.png "Flink UI")
 
 ### Flink Tables
 Flink Tables are a higher level abstraction that allows Flink to treat a data stream similar to a table and enables the use of Flink SQL. Flink Tables can only be used with official connectors. When both the source and sink are official connectors simple SQL statements can be used such as the below:
@@ -188,6 +191,8 @@ Flink DataStreams are a lower level abstraction that allows for more fine-tuning
 Debugging Flink proved quite challenging due to not being able to run locally. Due to its distributed processing framework, a cluster needed spun up and the flink job submitted to test the job. A lot of logging was required to pinpoint the issues. The logging statements would show up in `jobmanager` if it dealt with SQL syntax or startup issues and in `taskmanager` if it dealt with the data processing. These can be viewed in docker or in the Flink UI.  
 
 ## InfluxDB
+
+![InfluxDB UI](website/app/static/README/influxdb_ui.png "InfluxDB UI")
 
 ### Point Schema
 InfluxDB intakes a Point, which has a time in unix nanoseconds, multiple tags and multiple labels. It is important to make sure numbers were properly casted so that they could be visualized appropriately. I developed some code to transform the Flink Row into an InfluxDB Point:
