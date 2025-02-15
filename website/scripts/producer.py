@@ -110,6 +110,7 @@ class GuardianAPI:
                     ).replace(tzinfo=timezone.utc)
                     if timestamp > watermark:
                         watermark = timestamp
+                        record["search"] = self.SEARCH
                         self.producer.produce(
                             self.TOPIC,
                             key=self.SEARCH.encode("utf-8"),
@@ -139,6 +140,7 @@ class GuardianAPI:
                         ).replace(tzinfo=timezone.utc)
                         if timestamp > watermark:
                             watermark = timestamp
+                            record["search"] = self.SEARCH
                             self.producer.produce(
                                 self.TOPIC,
                                 key=self.SEARCH,

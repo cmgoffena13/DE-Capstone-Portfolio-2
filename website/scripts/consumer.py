@@ -54,9 +54,9 @@ class InfluxDBSink(ProcessFunction):
                     p.time(
                         int(v.timestamp() * 1_000_000_000)
                     )  # Ensure nanosecond precision
-                if k == "kafka_key":
+                if k in {"symbol", "search"}:
                     p.tag("key", str(v))
-                    logger.info(f"Kafka Key is: {v}")
+                    logger.info(f"Kafka Key is: {str(v)}")
                 elif isinstance(v, (int, float)):
                     p.field(k, float(v))
                 else:
@@ -91,7 +91,6 @@ def create_stock_prices_source_kafka(t_env):
 
     source_ddl = f"""
         CREATE TABLE stock_prices (
-            kafka_key VARCHAR,
             event_type VARCHAR,
             symbol VARCHAR,
             volume INT,
@@ -115,10 +114,7 @@ def create_stock_prices_source_kafka(t_env):
             'properties.group.id' = 'flink-consumer',
             'scan.startup.mode' = 'latest-offset',
             'properties.auto.offset.reset' = 'latest',
-            'format' = 'json',
-            'key.format' = 'raw',
-            'key.fields' = 'kafka_key',
-            'key.fields-prefix' = ''
+            'format' = 'json'
         );
     """
     print("Executing SQL: ", source_ddl)
@@ -133,7 +129,6 @@ def create_news_articles_source_kafka(t_env):
 
     source_ddl = f"""
         CREATE TABLE news_articles (
-            kafka_key VARCHAR,
             id VARCHAR,
             type VARCHAR,
             sectionId VARCHAR,
@@ -145,6 +140,7 @@ def create_news_articles_source_kafka(t_env):
             isHosted BOOLEAN,
             pillarId VARCHAR,
             pillarName VARCHAR,
+            `search` VARCHAR,
             event_timestamp AS TO_TIMESTAMP(webPublicationDate, '{pattern}')
         ) WITH (
             'connector' = 'kafka',
@@ -153,10 +149,7 @@ def create_news_articles_source_kafka(t_env):
             'properties.group.id' = 'flink-consumer',
             'scan.startup.mode' = 'earliest-offset',
             'properties.auto.offset.reset' = 'latest',
-            'format' = 'json',
-            'key.format' = 'raw',
-            'key.fields' = 'kafka_key',
-            'key.fields-prefix' = ''
+            'format' = 'json'
         );
     """
     print("Executing SQL: ", source_ddl)
@@ -180,10 +173,13 @@ def event_processing():
     stock_prices_table = t_env.from_path(stock_prices_source_name)
     news_articles_table = t_env.from_path(news_articles_source_name)
 
+    # result = t_env.execute_sql("""SELECT kafka_key FROM news_articles""")
+    # for row in result.collect():
+    #     logger.info(f"kafka key from flink table: {row}")
+
     # Declare stream schema (kind of lame)
     stock_prices_type_info = Types.ROW_NAMED(
         [
-            "kafka_key",
             "event_type",
             "symbol",
             "volume",
@@ -202,7 +198,6 @@ def event_processing():
             "event_timestamp",
         ],
         [
-            Types.STRING(),
             Types.STRING(),
             Types.STRING(),
             Types.INT(),
@@ -224,7 +219,6 @@ def event_processing():
 
     news_articles_type_info = Types.ROW_NAMED(
         [
-            "kafka_key",
             "id",
             "type",
             "sectionId",
@@ -236,6 +230,7 @@ def event_processing():
             "isHosted",
             "pillarId",
             "pillarName",
+            "search",
             "event_timestamp",
         ],
         [
@@ -247,8 +242,8 @@ def event_processing():
             Types.STRING(),
             Types.STRING(),
             Types.STRING(),
-            Types.STRING(),
             Types.BOOLEAN(),
+            Types.STRING(),
             Types.STRING(),
             Types.STRING(),
             Types.SQL_TIMESTAMP(),
