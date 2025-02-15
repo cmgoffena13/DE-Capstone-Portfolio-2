@@ -7,7 +7,7 @@ from typing import List
 from confluent_kafka import Producer
 from flask import current_app
 from polygon.websocket.models import WebSocketMessage
-from scripts.utils import equity_agg_to_json, fetch_with_retries
+from scripts.utils import equity_agg_to_json, fetch_with_retries, dict_to_article, article_to_json, EquityAgg
 
 
 class PolygonStream:
@@ -37,7 +37,7 @@ class PolygonStream:
             self.producer.produce(
                 self.TOPIC,
                 key=m.symbol.encode("utf-8"),
-                value=equity_agg_to_json(equity_agg=m),
+                value=equity_agg_to_json(EquityAgg(**m.__dict__)),
                 callback=self._delivery_report,
             )
         self.producer.flush()
@@ -111,10 +111,11 @@ class GuardianAPI:
                     if timestamp > watermark:
                         watermark = timestamp
                         record["search"] = self.SEARCH
+                        article = dict_to_article(record=record)  # convert to dataclass and validate
                         self.producer.produce(
                             self.TOPIC,
                             key=self.SEARCH.encode("utf-8"),
-                            value=json.dumps(record).encode("utf-8"),
+                            value=article_to_json(article=article),
                             callback=self._delivery_report,
                         )
                 self.producer.flush()
@@ -141,10 +142,11 @@ class GuardianAPI:
                         if timestamp > watermark:
                             watermark = timestamp
                             record["search"] = self.SEARCH
+                            article = dict_to_article(record=record)  # convert to dataclass and validate
                             self.producer.produce(
                                 self.TOPIC,
                                 key=self.SEARCH,
-                                value=json.dumps(record).encode("utf-8"),
+                                value=article_to_json(article=article),
                                 callback=self._delivery_report,
                             )
                     self.producer.flush()
