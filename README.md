@@ -195,7 +195,7 @@ Debugging Flink proved quite challenging due to not being able to run locally. D
 ![InfluxDB_UI](website/app/static/README/influxdb_ui.png "InfluxDB_UI")
 
 ### Point Schema
-InfluxDB intakes a Point, which has a time in unix nanoseconds, multiple tags and multiple labels. It is important to make sure numbers were properly casted so that they could be visualized appropriately. I developed some code to transform the Flink Row into an InfluxDB Point:
+InfluxDB intakes a Point, which has a time in unix nanoseconds, multiple tags and multiple labels. It is important to make sure numbers were properly casted so that they could be visualized approgpriately. I developed some code to transform the Flink Row into an InfluxDB Point:
 ```python
 def process_element(self, value, context: "ProcessFunction.Context"):
     if isinstance(value, Row):
