@@ -53,7 +53,8 @@ This project utilizes Polygon's live stream and The Guardian's API to showcase r
     3. [InfluxDB Tags](#InfluxDB-Tags)
 10. [Grafana](#Grafana)
     1. [Annotations](#Annotations)
-11. [Conclusion](#Conclusion)
+11. [Thoughts](#Thoughts)
+12. [Conclusion](#Conclusion)
 
 
 ## Introduction
@@ -307,7 +308,7 @@ from(bucket: "events")
 To view the web articles I had to add what are called `annotations` to the grafana graph, effectively marking important events on the stock graph.
 
 ## Thoughts
-One aspect of this project that I would do differently is try and separate the flink processing from the website and move it all into its own folder to separate dependencies. I would also split up the flink job into multiple jobs.
+One aspect of this project that I would do differently is try and separate the flink processing from the website and move it all into its own folder to separate dependencies. I would also split up the flink job into multiple jobs. That way the producers and consumers are separated and can scale as needed.
 
 ## Conclusion
 Developing a streaming solution is incredibly complex, but highly satisfying when it works. I learned a lot while debugging this project; Having little to no exposure of Kafka, Flink, InfluxDB, and Grafana forced me to really challenge myself to move the project forward. 
