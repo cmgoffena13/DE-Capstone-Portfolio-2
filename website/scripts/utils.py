@@ -4,6 +4,8 @@ import time
 from dataclasses import asdict, dataclass
 
 import requests
+from marshmallow import ValidationError
+from marshmallow_dataclass import class_schema
 
 
 def fetch_with_retries(url, params=None, max_retries=10, initial_delay=12):
@@ -51,12 +53,16 @@ class EquityAgg:
     average_size: int
     start_timestamp: int
     end_timestamp: int
-    otc: str = None
+    otc: str = None  # Make optional in schema
 
     def __post_init__(self):
-        for field_name, value in self.__dict__.items():
-            if value is None and field_name != "otc":  # Allow None only for 'otc'
-                raise ValueError(f"{field_name} cannot be None")
+        schema = EquityAggSchema()
+        errors = schema.validate(asdict(self))
+        if errors:
+            raise ValidationError(f"Validation errors: {errors}")
+
+
+EquityAggSchema = class_schema(EquityAgg)
 
 
 def equity_agg_to_json(equity_agg: EquityAgg):
@@ -80,9 +86,13 @@ class Article:
     search: str
 
     def __post_init__(self):
-        for field_name, value in self.__dict__.items():
-            if value is None:
-                raise ValueError(f"{field_name} cannot be None")
+        schema = ArticleSchema()
+        errors = schema.validate(asdict(self))
+        if errors:
+            raise ValidationError(f"Validation errors: {errors}")
+
+
+ArticleSchema = class_schema(Article)
 
 
 def article_to_json(article: Article):

@@ -37,12 +37,12 @@ This project utilizes Polygon's live stream and The Guardian's API to showcase r
 6. [Website](#Website)
     1. [Threading](#Threading)
     2. [API Watermarking](#API-Watermarking)
+    3. [Data Quality - Marshmallow](#Data-Quality---Marshmallow)
 7. [Kafka](#Kafak)
     1. [Kraft Mode](#Kraft-Mode)
     2. [Topics](#Topics)
     3. [Keys / Partitions](#Keys-/-Partitions)
     4. [Kafka Debugging](#Kafka-Debugging)
-    5. [Dataclasses](#Dataclasses)
 8. [Flink](#Flink)
     1. [Flink Tables](#Flink-Tables)
     2. [Flink DataStreams](#Flink-DataStreams)
@@ -163,7 +163,7 @@ URL: https://content.guardianapis.com/search
 - `webTitle` STRING - Title of the article
 - `webUrl` STRING - URL link to the article on Guardian.com, html content
 - `apiUrl` STRING - Programmatic address, very similar to URL link, raw content
-- `isHosted` BOOLEAN - 
+- `isHosted` BOOLEAN - Whether the article is hosted by the Guardian or not
 - `pillarId` STRING - ID of pillar
 - `pillarName` STRING - Proper name of pillar, high level category
 - `search` STRING - This is the text input for the API call to query results. Used as the Kafka Key.
@@ -190,7 +190,38 @@ One of the main issues I ran into while using the flask home page is when submit
 ```
 
 ### API Watermarking
-One of the challenges with The Guardian's API is that it only allowed to search through articles for a specific date. That means I could continuously query the API, but I would keep getting old results. I utilized the `webPublicationDate` timestamp field in the results to ensure only new articles were added to the kafka topic by maintaining a watermark timestamp and comparing the two fields.
+One of the challenges with The Guardian's API is that it only allowed to search through articles for a specific date. That means I could continuously query the API, micro-batching, but I would keep getting old results. I utilized the `webPublicationDate` timestamp field in the results to ensure only new articles were added to the kafka topic by maintaining a watermark timestamp and comparing the two fields.
+
+### Data Quality - Marshmallow
+Data Quality Checks can be difficult with streaming data because most checks have to be row level. I decided to create a Marshmallow schema for each data source to ensure the schema and data types are checked. The second check for each is also incorporated by Marshmallow by ensuring the fields are Not None. I found a package called `marshmallow_dataclass` that allows a marshmallow schema to be created from a dataclass. Made it super easy. See below:
+```python
+@dataclass
+class EquityAgg:
+    event_type: str
+    symbol: str
+    volume: int
+    accumulated_volume: int
+    official_open_price: float
+    vwap: float
+    open: float
+    close: float
+    high: float
+    low: float
+    aggregate_vwap: float
+    average_size: int
+    start_timestamp: int
+    end_timestamp: int
+    otc: str = None  # Make optional in schema
+
+    def __post_init__(self):
+        schema = EquityAggSchema()
+        errors = schema.validate(asdict(self))
+        if errors:
+            raise ValidationError(f"Validation errors: {errors}")
+
+
+EquityAggSchema = class_schema(EquityAgg)
+```
 
 ## Kafka
 ![Kafka_UI](website/app/static/README/kafka_ui.PNG "Kafka_UI")
@@ -206,31 +237,6 @@ Kafka Partitioning allows for the splitting up of topics for parallelism and sca
 
 ### Kafka Debugging
 The Kafka UI was very helpful in seeing the status of the cluster, topics, partitions, and the messages themselves while developing.
-
-### Dataclasses
-I wanted to ensure I knew if there was any schema changes from the streams, so I created dataclasses that I transformed the stream records into. These dataclasses provide NOT NULL constraints for the data when itialized. See below:
-```python
-class Article:
-    id: str
-    type: str
-    sectionId: str
-    webPublicationDate: str
-    webTitle: str
-    webUrl: str
-    apiUrl: str
-    isHosted: bool
-    pillarId: str
-    pillarName: str
-    search: str
-
-    def __post_init__(self):
-        for field_name, value in self.__dict__.items():
-            if value is None:
-                raise ValueError(f"{field_name} cannot be None")
-```
-<sup>I briefly thought about bringing in Pydantic, but a simple dataclass worked for my needs.</sup>
-
-Kafka Confluent Schema Registry crossed my mind, and I would switch to that if I expected other producers and consumers. In this project it is small enough to code the schemas myself.
 
 ## Flink
 I ended up having one Flink job to process the data from the Kafka Topics and insert it into InfluxDB. In retrospect, it makes sense to split up the tasks into multiple Flink jobs to minimize points of failure and unnecessary dependencies.
@@ -287,7 +293,12 @@ Unfortunately InfluxDB did not have an official Flink Connector, which meant I h
 Learned quite a lot about time-series databases and how important it is to know the difference beween `tags` and `labels` in InfluxDB. Tags are indexed and labels are not. Tags allow filtering to occur, such as filtering to a specific stock ticker while labels are additional data that can be attached, similar to dimension attributes. 
 
 ## Grafana
+Grafan was pretty intuitive to use as you could hook up a data source and then just use the language needed to query that data source. Ended up writing a simple InfluxDB query to view the stock prices:
+```
+
+```
 
 ### Annotations
+To view the web articles I had to add what are called `annotations` to the grafana graph, effectively marking important events on the stock graph.
 
 ## Conclusion
