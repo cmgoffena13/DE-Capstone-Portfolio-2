@@ -227,16 +227,16 @@ EquityAggSchema = class_schema(EquityAgg)
 ![Kafka_UI](website/app/static/README/kafka_ui.PNG "Kafka_UI")
 
 ### Kraft Mode
-A Kafka cluster is traditionally managed by Zookeeper, but Kafka recently came out with K-raft mode, which allows a number of Kafka brokers to be a `controller`. One of theese brokers is elected as the leader, which coordinates the cluster and ensures proper failover.
+A Kafka cluster is traditionally managed by Zookeeper, but Kafka recently came out with K-raft mode, which allows a number of Kafka brokers to be a `controller`. One of these brokers is elected as the leader, which coordinates the cluster and ensures proper failover.
 
 ### Topics
-Kafka Topics are used to logically split up the data that Kafka stores. I created two topics: `stock-prices` and `news-articles` to ensure that the two real-time data sources I have were stored separately.
+Kafka Topics are used to logically split up the data that Kafka stores. I created two topics: `stock-prices` and `news-articles` to ensure that the two data sources I have were stored separately.
 
 ### Keys / Partitions
-Kafka Partitioning allows for the splitting up of topics for parallelism and scalability. An optional identifier for a partition within a topic can be created/assigned as a key. The stock ticker or the search term was assigned as the key to ensure that data was being logically divided as a partition. This also allowed me to grab the partition key during Flink processing to properly tag the time-series data.
+Kafka Partitioning allows for the splitting up of topics for parallelism and scalability. An optional identifier for a partition within a topic can be created/assigned as a key. The stock `symbol` or the `search` term was assigned as the key to ensure that data was being logically divided as a partition. This also allowed me to grab the partition key during Flink processing to properly tag the time-series data.
 
 ### Kafka Debugging
-The Kafka UI was very helpful in seeing the status of the cluster, topics, partitions, and the messages themselves while developing.
+The Kafka UI was very helpful in seeing the status of the cluster, topics, partitions, and the messages themselves while developing. I used the <a href="https://github.com/provectus/kafka-ui">free UI</a> developed by provectuslabs.
 
 ## Flink
 I ended up having one Flink job to process the data from the Kafka Topics and insert it into InfluxDB. In retrospect, it makes sense to split up the tasks into multiple Flink jobs to minimize points of failure and unnecessary dependencies.
@@ -265,7 +265,7 @@ Debugging Flink proved quite challenging due to not being able to run locally. D
 ![InfluxDB_UI](website/app/static/README/influxdb_ui.PNG "InfluxDB_UI")
 
 ### Point Schema
-InfluxDB intakes a Point, which has a time in unix nanoseconds, multiple tags and multiple labels. It is important to make sure numbers were properly casted so that they could be visualized approgpriately. I developed some code to transform the Flink Row into an InfluxDB Point:
+InfluxDB intakes a Point, which has a time in unix nanoseconds, multiple tags and multiple labels. It is important to make sure numbers were properly casted so that they could be visualized appropriately. I developed some code to transform the Flink Row into an InfluxDB Point:
 ```python
 def process_element(self, value, context: "ProcessFunction.Context"):
     if isinstance(value, Row):
@@ -290,15 +290,24 @@ def process_element(self, value, context: "ProcessFunction.Context"):
 Unfortunately InfluxDB did not have an official Flink Connector, which meant I had to create my own. Ended up greatly expanding upon my knowledge of InfluxDB and how to use their Python SDK to create a custom sink by using their API. 
 
 ### InfluxDB Tags
-Learned quite a lot about time-series databases and how important it is to know the difference beween `tags` and `labels` in InfluxDB. Tags are indexed and labels are not. Tags allow filtering to occur, such as filtering to a specific stock ticker while labels are additional data that can be attached, similar to dimension attributes. 
+Learned quite a lot about time-series databases and how important it is to know the difference beween `tags` and `labels` in InfluxDB. Tags are indexed and labels are not. Tags allow filtering to occur, such as filtering to a specific stock ticker while labels are additional data that can be attached, similar to dimension attributes. Given that InfluxDB is time-series, most labels need to be a number since they're used to analyze metrics over time.
 
 ## Grafana
-Grafan was pretty intuitive to use as you could hook up a data source and then just use the language needed to query that data source. Ended up writing a simple InfluxDB query to view the stock prices:
+Grafan was pretty intuitive to use as you could hook up a data source and then just use the language needed to query that data source. Ended up writing a simple InfluxDB Flux query to view the stock prices:
 ```
+fieldList = ["open", "close", "high", "low"]
 
+from(bucket: "events")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r._measurement == "stock_prices")
+  |> filter(fn: (r) => contains(value: r._field, set: fieldList))
 ```
 
 ### Annotations
 To view the web articles I had to add what are called `annotations` to the grafana graph, effectively marking important events on the stock graph.
 
+## Thoughts
+One aspect of this project that I would do differently is try and separate the flink processing from the website and move it all into its own folder to separate dependencies. I would also split up the flink job into multiple jobs.
+
 ## Conclusion
+Developing a streaming solution is incredibly complex, but highly satisfying when it works. I learned a lot while debugging this project; Having little to no exposure of Kafka, Flink, InfluxDB, and Grafana forced me to really challenge myself to move the project forward. 
