@@ -54,7 +54,7 @@ class InfluxDBSink(ProcessFunction):
                     p.time(
                         int(v.timestamp() * 1_000_000_000)
                     )  # Ensure nanosecond precision
-                if k in {"symbol", "search"}:
+                if k in {"symbol", "search", "webTitle"}:
                     p.tag("key", str(v))
                     logger.info(f"Kafka Key is: {str(v)}")
                 elif isinstance(v, (int, float)):

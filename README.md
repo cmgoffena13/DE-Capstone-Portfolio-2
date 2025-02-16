@@ -29,25 +29,31 @@ This project utilizes Polygon's live stream and The Guardian's API to showcase r
 2. [Technology Choices](#Technology-Choices)
 3. [Initial Data Investigations - Polygon Websocket](#Initial-Data-Investigations---Polygon-Websocket)
     1. [Real-Time Websocket Feed](#Real-Time-Websocket-Feed)
+    2. [Polygon Data Dictionary](#Polygon-Data-Dictionary)
 4. [Initial Data Investigations - The Guardian API](#Initial-Data-Investigations---The-Guardian-API)
     1. [Content Endpoint](#Content-Endpoint)
-5. [Website](#Website)
+    2. [Guardian Data Dictionary](#Guardian-Data-Dictionary)
+5. [Metrics](#Metrics)
+6. [Website](#Website)
     1. [Threading](#Threading)
     2. [API Watermarking](#API-Watermarking)
-6. [Kafka](#Kafak)
+7. [Kafka](#Kafak)
     1. [Kraft Mode](#Kraft-Mode)
     2. [Topics](#Topics)
     3. [Keys / Partitions](#Keys-/-Partitions)
     4. [Kafka Debugging](#Kafka-Debugging)
-7. [Flink](#Flink)
+    5. [Dataclasses](#Dataclasses)
+8. [Flink](#Flink)
     1. [Flink Tables](#Flink-Tables)
     2. [Flink DataStreams](#Flink-DataStreams)
     3. [Flink Debugging](#Flink-Debugging)
-8. [InfluxDB](#InfluxDB)
+9. [InfluxDB](#InfluxDB)
     1. [Point Schema](#Point-Schema)
     2. [Flink Custom Sink](#Custom-Sink)
     3. [InfluxDB Tags](#InfluxDB-Tags)
-9. [Conclusion](#Conclusion)
+10. [Grafana](#Grafana)
+    1. [Annotations](#Annotations)
+11. [Conclusion](#Conclusion)
 
 
 ## Introduction
@@ -62,9 +68,9 @@ From a skillset perspective I am proficient in SQL and Python, which led me to c
  - **AWS**: I used AWS for my last project and really enjoyed the ease of use and UI. So here we are again. 
  - **Flask**: I am proficient in Flask web development and I wanted a web page so that I could easily adjust the stream inputs.
  - **InfluxDB**: I wanted to originally use Prometheus, but Prometheus doesn't support inserting of data, just scraping websites. Needed a time-series database that supported inserts from Flink, so decided on the popular InfluxDB.    
- **EDIT**: InfluxDB ended up not having an official Flink connector, but still became my best option for real-time.
+ **EDIT**: InfluxDB ended up not having an official Flink connector, but still became my best option for real-time. Worked well with Grafana.
  - **Grafana**: Free dashboard tool designed for real-time data. I had already used Prometheus before, so it made sense to gain proficiency in Grafana since they work so well together.
- - **Docker**: great way to re-produce environments and easily create a network using docker-compose.
+ - **Docker**: great way to re-produce environments and easily create a development network using docker-compose.
 
 ## Initial Data Investigations - Polygon Websocket
 I am already subscribed to some polygon endpoints and with that subscription comes access to their 15 min delay websocket. Polygon is a great data resource that I was excited to use again.
@@ -93,6 +99,22 @@ EquityAgg(
 )
 ```
 <sup>Initial Thoughts: Given the start and end timestamps of the aggregation, can use the end timestamp as a watermark. Can see whether price went up or down during the time period as well. Aggregation is over a time frame of 1 minute. Noticed that the decimal placement can go pretty long.</sup>
+
+### Polygon Data Dictionary
+- `symbol` STRING - symbol ticker of the company
+- `volume` INTEGER - volume traded within the 1 minute interval
+- `accumulated_volume` INTEGER - Accumulated volume for the day
+- `official_open_price` FLOAT - Open stock price of the day
+- `vwap` FLOAT - Volume Weighted Average Price
+- `open` FLOAT - Open stock price of 1 minute interval
+- `close` FLOAT - Close stock price of 1 minute interval
+- `high` FLOAT - High stock price of 1 minute interval
+- `low` FLOAT - Low stock rice of 1 minute interval
+- `aggregate_vwap` FLOAT - Volume Weighted Average Price of the 1 minute interval
+- `average_size` INTEGER - Average trade size of the 1 minute interval
+- `start_timestamp` INTEGER - Epoch timestamp showing start of 1 minute interval
+- `end_timestamp` INTEGER - Epoch timestamp showing end of 1 minute interval
+- `otc` BOOLEAN - Whether ticker is otc or not
 
 ## Initial Data Investigations - The Guardian API
 The guardian is a well-respected news outlet that focuses on the US. It offers a free API key for development/non-profit purposes. I've had my eye on The Guardian ever since they helped Edward Snowden get the word out about the NSA's surveillance activities. You can check out their platform <a href="https://open-platform.theguardian.com/">here</a>.
@@ -132,6 +154,23 @@ URL: https://content.guardianapis.com/search
 ```
 <sup>Initial thoughts: webTitle and webPublicationDate seem to be the most important data points. Status is important as well to check. Also have to be careful about search terms, I wanted the ecommerce Amazon, not the jungle. Looks like their is a sectionName that can be filtered for US activity only</sup>
 
+### Guardian Data Dictionary
+- `id` STRING - Domain Endpoint; ID of the article
+- `type` STRING - Type of published material ex. Article, Blog
+- `sectionId` STRING - ID of section
+- `sectionName` STRING - Proper name of section, low level category
+- `webPublicationDate` DATETIME(3) - Datetime in UTC when article was published/updated
+- `webTitle` STRING - Title of the article
+- `webUrl` STRING - URL link to the article on Guardian.com, html content
+- `apiUrl` STRING - Programmatic address, very similar to URL link, raw content
+- `isHosted` BOOLEAN - 
+- `pillarId` STRING - ID of pillar
+- `pillarName` STRING - Proper name of pillar, high level category
+- `search` STRING - This is the text input for the API call to query results. Used as the Kafka Key.
+
+## Metrics
+The main metrics are from the polygon api, essentially the average of open, close, high, low so I can see the stock performance in real-time. In the future I could use a watermark in Flink and calculate the change percentage in 5-15 min interval to look for trade signals.
+
 ## Website
 I decided early on that I wanted to create a web page to easily change the polygon and guardian query inputs. I ended up with a simple flask home page.
 ![Website](website/app/static/README/stock_tracker.png "Website")
@@ -167,6 +206,31 @@ Kafka Partitioning allows for the splitting up of topics for parallelism and sca
 
 ### Kafka Debugging
 The Kafka UI was very helpful in seeing the status of the cluster, topics, partitions, and the messages themselves while developing.
+
+### Dataclasses
+I wanted to ensure I knew if there was any schema changes from the streams, so I created dataclasses that I transformed the stream records into. These dataclasses provide NOT NULL constraints for the data when itialized. See below:
+```python
+class Article:
+    id: str
+    type: str
+    sectionId: str
+    webPublicationDate: str
+    webTitle: str
+    webUrl: str
+    apiUrl: str
+    isHosted: bool
+    pillarId: str
+    pillarName: str
+    search: str
+
+    def __post_init__(self):
+        for field_name, value in self.__dict__.items():
+            if value is None:
+                raise ValueError(f"{field_name} cannot be None")
+```
+<sup>I briefly thought about bringing in Pydantic, but a simple dataclass worked for my needs.</sup>
+
+Kafka Confluent Schema Registry crossed my mind, and I would switch to that if I expected other producers and consumers. In this project it is small enough to code the schemas myself.
 
 ## Flink
 I ended up having one Flink job to process the data from the Kafka Topics and insert it into InfluxDB. In retrospect, it makes sense to split up the tasks into multiple Flink jobs to minimize points of failure and unnecessary dependencies.
@@ -221,5 +285,9 @@ Unfortunately InfluxDB did not have an official Flink Connector, which meant I h
 
 ### InfluxDB Tags
 Learned quite a lot about time-series databases and how important it is to know the difference beween `tags` and `labels` in InfluxDB. Tags are indexed and labels are not. Tags allow filtering to occur, such as filtering to a specific stock ticker while labels are additional data that can be attached, similar to dimension attributes. 
+
+## Grafana
+
+### Annotations
 
 ## Conclusion

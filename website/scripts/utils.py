@@ -69,6 +69,7 @@ class Article:
     id: str
     type: str
     sectionId: str
+    sectionName: str
     webPublicationDate: str
     webTitle: str
     webUrl: str
