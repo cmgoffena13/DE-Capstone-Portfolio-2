@@ -8,6 +8,19 @@ from marshmallow import ValidationError
 from marshmallow_dataclass import class_schema
 
 
+def read_config():
+    # reads the client configuration from client.properties
+    # and returns it as a key-value map
+    config = {}
+    with open("client.properties") as fh:
+        for line in fh:
+            line = line.strip()
+        if len(line) != 0 and line[0] != "#":
+            parameter, value = line.strip().split("=", 1)
+            config[parameter] = value.strip()
+    return config
+
+
 def fetch_with_retries(url, params=None, max_retries=10, initial_delay=12):
     retries = 0
     while retries < max_retries:

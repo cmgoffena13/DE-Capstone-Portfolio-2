@@ -28,10 +28,17 @@ try:
 except KeyError:
     raise KeyError(f"Missing. Path is: {base_dir} + /.env - Check for file existence")
 
+LOCAL = os.environ["LOCAL"]
+
+if LOCAL == 1:
+    influxdb_url = "http://influxdb:8086"
+else:
+    influxdb_url = os.environ["INFLUXDB_URL"]
+
 
 class InfluxDBSink(ProcessFunction):
     def __init__(self, measurement):
-        self.url = "http://influxdb:8086"
+        self.url = influxdb_url
         self.bucket = "events"
         self.org = "NA"
         self.measurement = measurement
@@ -54,7 +61,7 @@ class InfluxDBSink(ProcessFunction):
                     p.time(
                         int(v.timestamp() * 1_000_000_000)
                     )  # Ensure nanosecond precision
-                if k in {"symbol", "search", "webTitle"}:
+                if k in {"symbol", "search"}:
                     p.tag("key", str(v))
                     logger.info(f"Kafka Key is: {str(v)}")
                 elif isinstance(v, (int, float)):
@@ -147,7 +154,7 @@ def create_news_articles_source_kafka(t_env):
             'properties.bootstrap.servers' = '{kafka_url}',
             'topic' = '{topic}',
             'properties.group.id' = 'flink-consumer',
-            'scan.startup.mode' = 'earliest-offset',
+            'scan.startup.mode' = 'latest-offset',
             'properties.auto.offset.reset' = 'latest',
             'format' = 'json'
         );

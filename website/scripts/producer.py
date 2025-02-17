@@ -13,6 +13,7 @@ from scripts.utils import (
     equity_agg_to_json,
     fetch_with_retries,
 )
+from utils import read_config
 
 
 class PolygonStream:
@@ -22,7 +23,12 @@ class PolygonStream:
         self.app = app
         with self.app.app_context():
             current_app.logger.info("Initializing PolygonStream")
-            producer_conf = {"bootstrap.servers": current_app.config["KAFKA_BROKER"]}
+            if current_app.config["LOCAL"] == 1:
+                producer_conf = {
+                    "bootstrap.servers": current_app.config["KAFKA_BROKER"]
+                }
+            else:
+                producer_conf = read_config()
         self.producer = Producer(producer_conf)
         self.TOPIC = TOPIC
 
@@ -65,7 +71,12 @@ class GuardianAPI:
         self.app = app
         with self.app.app_context():
             current_app.logger.info("Initializing GuardianAPI Stream")
-            producer_conf = {"bootstrap.servers": current_app.config["KAFKA_BROKER"]}
+            if current_app.config["LOCAL"] == 1:
+                producer_conf = {
+                    "bootstrap.servers": current_app.config["KAFKA_BROKER"]
+                }
+            else:
+                producer_conf = read_config()
             self.GUARDIAN_API_KEY = current_app.config["GUARDIAN_API_KEY"]
         self.producer = Producer(producer_conf)
         self.api_url = "https://content.guardianapis.com/search"
@@ -159,7 +170,7 @@ class GuardianAPI:
                                 callback=self._delivery_report,
                             )
                     self.producer.flush()
-                time.sleep(15)
+                time.sleep(60)
                 self._update_date()
 
         threading.Thread(target=loop_api).start()

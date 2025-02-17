@@ -12,6 +12,8 @@ docker-compose_deprecated.yml
 dockerdeploy.yml
 dockerdeploy.json
 
+client.properties
+
 # Certificates
 *.pem
 
