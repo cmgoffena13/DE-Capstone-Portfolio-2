@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 from os.path import abspath, dirname, join
 
 from dotenv import load_dotenv
@@ -35,8 +36,10 @@ if LOCAL == 1:
     kafka_url = "kafka:9092"
     logger.info("Local Config Initialized")
 else:
-    influxdb_url = os.environ["INFLUXDB_URL"]
+    influxdb_url = os.environ.get("INFLUXDB_URL")
     logger.info("Confluent Config Initialized")
+    logger.info("Flink Container not needed, exiting job")
+    sys.exit(0)
 
 
 class InfluxDBSink(ProcessFunction):

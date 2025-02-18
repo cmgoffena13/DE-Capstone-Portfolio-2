@@ -1,6 +1,6 @@
 # Real-Time Stock Prices & News
 
-This project utilizes Polygon's live stream and The Guardian's API to showcase real-time stock prices and news to watch for causation and signals in regards to day trading. 
+This project utilizes Polygon's live stream and The Guardian's API to showcase real-time stock prices and news to watch for causation and signals. 
 
 [![build](https://github.com/cmgoffena13/DE-Capstone-Portfolio-2/actions/workflows/build.yml/badge.svg)](https://github.com/cmgoffena13/DE-Capstone-Portfolio-2/actions/workflows/build.yml)
 ![linesofcode](https://aschey.tech/tokei/github/cmgoffena13/DE-Capstone-Portfolio-2?category=code)
