@@ -12,8 +12,8 @@ from scripts.utils import (
     dict_to_article,
     equity_agg_to_json,
     fetch_with_retries,
+    read_config,
 )
-from utils import read_config
 
 
 class PolygonStream:
@@ -27,8 +27,10 @@ class PolygonStream:
                 producer_conf = {
                     "bootstrap.servers": current_app.config["KAFKA_BROKER"]
                 }
+                current_app.logger.info("Local Config Initialized")
             else:
                 producer_conf = read_config()
+                current_app.logger.info("Confluent Config Initialized")
         self.producer = Producer(producer_conf)
         self.TOPIC = TOPIC
 

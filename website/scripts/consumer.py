@@ -20,7 +20,7 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-base_dir = abspath(dirname(__file__))
+base_dir = abspath(dirname(dirname(__file__)))
 load_dotenv(join(base_dir, ".env"))
 
 try:
@@ -28,12 +28,15 @@ try:
 except KeyError:
     raise KeyError(f"Missing. Path is: {base_dir} + /.env - Check for file existence")
 
-LOCAL = os.environ["LOCAL"]
+LOCAL = int(os.environ["LOCAL"])
 
 if LOCAL == 1:
     influxdb_url = "http://influxdb:8086"
+    kafka_url = "kafka:9092"
+    logger.info("Local Config Initialized")
 else:
     influxdb_url = os.environ["INFLUXDB_URL"]
+    logger.info("Confluent Config Initialized")
 
 
 class InfluxDBSink(ProcessFunction):

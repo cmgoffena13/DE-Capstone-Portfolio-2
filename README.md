@@ -294,9 +294,12 @@ Unfortunately InfluxDB did not have an official Flink Connector, which meant I h
 Learned quite a lot about time-series databases and how important it is to know the difference beween `tags` and `labels` in InfluxDB. Tags are indexed and labels are not. Tags allow filtering to occur, such as filtering to a specific stock ticker while labels are additional data that can be attached, similar to dimension attributes. Given that InfluxDB is time-series, most labels need to be a number since they're used to analyze metrics over time.
 
 ## Grafana
+
+![Grafana_UI](website/app/static/README/grafana_ui.PNG "Grafana_UI")
+
 Grafan was pretty intuitive to use as you could hook up a data source and then just use the language needed to query that data source. Ended up writing a simple InfluxDB Flux query to view the stock prices:
 ```
-fieldList = ["open", "close", "high", "low"]
+fieldList = ["high", "low"]
 
 from(bucket: "events")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -305,7 +308,7 @@ from(bucket: "events")
 ```
 
 ### Annotations
-To view the web articles I had to add what are called `annotations` to the grafana graph, effectively marking important events on the stock graph. Used the below query to "annotate" events to the time-series graph:
+To view the web articles I had to add what are called `annotations` to the grafana graph, effectively marking important events on the stock graph. They are shown as the vertical dotted lines. Used the below query to "annotate" events to the time-series graph:
 ```
 from(bucket: "events")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -313,6 +316,8 @@ from(bucket: "events")
   |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
   |> keep(columns: ["_time", "webTitle", "webUrl"])
 ```
+
+I also ended up adding a table below the graph so it is easy to quickly see all the articles that came out and give the URLs for more deep-dives.
 
 ## Deployment
 For deployment, Kafka and Flink were pushed off onto Confluent. I deployed the producer/website to an AWS EC2 instance and had it send messages to Kafka, processed through serverless Flink, and then inserted into InfluxDB on the same EC2 instance. I could then view the Grafana dashboard by using ssh and linking the grafana port to my local port.
@@ -325,5 +330,6 @@ Some more modifications I would make if I had the time:
 - I would create an iceberg table to store the appends of the stream separately. The historical data could be very valuable since InfluxDB trims the data past 48 hours
 - Find a scalable way to setup alerts in Grafana to trigger if some stock prices go above or below a certain point
 - Work on observability around the pipeline due to so many failure points
+- Look into the Guardian Blogs and see how to filter them out. Looks the publication date is really the update date.
 ## Conclusion
 Developing a streaming solution is incredibly complex, but highly satisfying when it works. I learned a lot while debugging this project; Having little to no exposure of Kafka, Flink, InfluxDB, and Grafana forced me to really challenge myself to move the project forward. Overall I learned a ton.

@@ -21,3 +21,5 @@ class Config(object):
     KAFKA_BROKER = os.getenv("KAFKA_BROKER", "kafka:9092")
 
     INFLUXDB_TOKEN = os.environ.get("INFLUXDB_TOKEN")
+
+    LOCAL = int(os.environ.get("LOCAL"))
