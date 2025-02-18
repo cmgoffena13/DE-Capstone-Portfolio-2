@@ -6,6 +6,7 @@ __pycache__/
 
 # stuff
 deploy_steps.ps1
+deploy steps.txt
 
 # deprecated docker
 docker-compose_deprecated.yml
