@@ -5,6 +5,8 @@ This project utilizes Polygon's live stream and The Guardian's API to showcase r
 [![build](https://github.com/cmgoffena13/DE-Capstone-Portfolio-2/actions/workflows/build.yml/badge.svg)](https://github.com/cmgoffena13/DE-Capstone-Portfolio-2/actions/workflows/build.yml)
 ![linesofcode](https://aschey.tech/tokei/github/cmgoffena13/DE-Capstone-Portfolio-2?category=code)
 
+![Stocks_Dashboard](website/app/static/README/stocks_dashboard.PNG "Website")
+
 ## Technologies Used
  ![Kafka](https://img.shields.io/badge/-Kafka-231F20?style=flat&logoColor=white&logo=apachekafka)
  ![Flink](https://img.shields.io/badge/-Flink-E6526F?style=flat&logoColor=white&logo=apacheflink)
@@ -293,6 +295,9 @@ Unfortunately InfluxDB did not have an official Flink Connector, which meant I h
 ### InfluxDB Tags
 Learned quite a lot about time-series databases and how important it is to know the difference beween `tags` and `labels` in InfluxDB. Tags are indexed and labels are not. Tags allow filtering to occur, such as filtering to a specific stock ticker while labels are additional data that can be attached, similar to dimension attributes. Given that InfluxDB is time-series, most labels need to be a number since they're used to analyze metrics over time.
 
+### InfluxDB Schema
+Time-series databases, at least InfluxDB, have a unique schema of three columns: Timestamp, Field, Value. It is essentially a SQL table unpivoted, which I thought was really interesting to simply data management. It is always important to know how your data is stored!
+
 ## Grafana
 
 ![Grafana_UI](website/app/static/README/grafana_ui.PNG "Grafana_UI")
@@ -320,7 +325,10 @@ from(bucket: "events")
 I also ended up adding a table below the graph so it is easy to quickly see all the articles that came out and give the URLs for more deep-dives.
 
 ## Deployment
-For deployment, Kafka and Flink were pushed off onto Confluent. I deployed the producer/website to an AWS EC2 instance and had it send messages to Kafka, processed through serverless Flink, and then inserted into InfluxDB on the same EC2 instance. I could then view the Grafana dashboard by using ssh and linking the grafana port to my local port.
+For deployment, Kafka and Flink were pushed off onto Confluent. I deployed the producer/website to an AWS EC2 instance and had it send messages to Kafka, processed through serverless Flink, and then inserted into InfluxDB on the same EC2 instance. I could then view the Grafana dashboard by using ssh and linking the grafana port to my local port.  
+
+It was a pretty simple transition from the docker-compose to the cloud. Here were a couple of things that needed addressed: 
+- Exposing the right ports for the EC2 server to produce the kafka messages appropriately and have the flink job insert back into InfluxDB
 
 ## Thoughts 
 One aspect of this project that I would do differently is try and separate the flink processing from the website and move it all into its own folder to separate dependencies. I would also split up the flink job into multiple jobs. That way the producers and consumers are separated and can scale as needed.  
