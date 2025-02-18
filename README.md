@@ -55,6 +55,8 @@ This project utilizes Polygon's live stream and The Guardian's API to showcase r
 10. [Grafana](#Grafana)
     1. [Annotations](#Annotations)
 11. [Deployment](#Deployment)
+    1. [Kafka InfluxDB Connector](#Kafka-InfluxDB-Connector)
+    2. [Confluent Lineage](#Confluent-Lineage)
 12. [Thoughts](#Thoughts)
 13. [Conclusion](#Conclusion)
 
@@ -329,13 +331,20 @@ For deployment, Kafka and Flink were pushed off onto Confluent. I deployed the p
 
 It was a pretty simple transition from the docker-compose to the cloud. Here were a couple of things that needed addressed: 
 - Exposing the right ports for the EC2 server to produce the kafka messages appropriately and have the flink job insert back into InfluxDB
+- Becoming familiar with the Confluent UI
+
+
+### Kafka InfluxDB Connector
+I found that Kafka had an InfluxDB connector when messing with Confluent. I ended up pivoting away from Flink due to the simplicity of Kafka Connect. This required some restructing of the message in the kafka topics, but was well worth it to simplify the process.
+
+### Confluent Lineage
 
 ## Thoughts 
 One aspect of this project that I would do differently is try and separate the flink processing from the website and move it all into its own folder to separate dependencies. I would also split up the flink job into multiple jobs. That way the producers and consumers are separated and can scale as needed.  
 
 Some more modifications I would make if I had the time:
 - Physically store the watermark/timestamp for the Guardian API to prevent duplicate data upon shutdown mid-day
-- I would create an iceberg table to store the appends of the stream separately. The historical data could be very valuable since InfluxDB trims the data past 48 hours
+- I would create an iceberg table to store the appends of the stream separately. The historical data could be very valuable since InfluxDB trims the data past 48 hours. Probably use S3, create the table using pyiceberg, then a simple flink query could do append.
 - Find a scalable way to setup alerts in Grafana to trigger if some stock prices go above or below a certain point
 - Work on observability around the pipeline due to so many failure points
 - Look into the Guardian Blogs and see how to filter them out. Looks the publication date is really the update date.
