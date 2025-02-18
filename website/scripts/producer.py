@@ -30,9 +30,7 @@ class PolygonStream:
                 current_app.logger.info("Local Config Initialized")
             else:
                 producer_conf = read_config()
-                current_app.logger.info(
-                    f"Confluent Config Initialized: {producer_conf}"
-                )
+                current_app.logger.info("Confluent Config Initialized")
         self.producer = Producer(producer_conf)
         self.TOPIC = TOPIC
 
@@ -49,10 +47,18 @@ class PolygonStream:
 
     def _handle_msg(self, msg: List[WebSocketMessage]):
         for m in msg:
+
+            equity_agg = EquityAgg(**m.__dict__)
+            with self.app.app_context():
+                if current_app.config["LOCAL"] == 0:
+                    influx_payload = equity_agg.to_influx_json()
+                else:
+                    influx_payload = equity_agg
+
             self.producer.produce(
                 self.TOPIC,
                 key=m.symbol.encode("utf-8"),
-                value=equity_agg_to_json(EquityAgg(**m.__dict__)),
+                value=equity_agg_to_json(influx_payload),
                 callback=self._delivery_report,
             )
         self.producer.flush()
@@ -131,13 +137,20 @@ class GuardianAPI:
                     if timestamp > watermark:
                         watermark = timestamp
                         record["search"] = self.SEARCH
+
                         article = dict_to_article(
                             record=record
                         )  # convert to dataclass and validate
+                        with self.app.app_context():
+                            if current_app.config["LOCAL"] == 0:
+                                article_payload = article.to_influx_json()
+                            else:
+                                article_payload = article
+
                         self.producer.produce(
                             self.TOPIC,
                             key=self.SEARCH.encode("utf-8"),
-                            value=article_to_json(article=article),
+                            value=article_to_json(article_payload),
                             callback=self._delivery_report,
                         )
                 self.producer.flush()
@@ -164,9 +177,15 @@ class GuardianAPI:
                         if timestamp > watermark:
                             watermark = timestamp
                             record["search"] = self.SEARCH
+
                             article = dict_to_article(
                                 record=record
                             )  # convert to dataclass and validate
+
+                            with self.app.app_context():
+                                if current_app.config["LOCAL"] == 0:
+                                    article = article.to_influx_json()
+
                             self.producer.produce(
                                 self.TOPIC,
                                 key=self.SEARCH,

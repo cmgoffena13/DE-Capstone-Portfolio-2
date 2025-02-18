@@ -1,7 +1,8 @@
 import json
 import random
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, is_dataclass
+from datetime import datetime, timezone
 from os.path import abspath, dirname, join
 
 import requests
@@ -77,12 +78,41 @@ class EquityAgg:
         if errors:
             raise ValidationError(f"Validation errors: {errors}")
 
+    def to_influx_json(
+        self,
+        measurement: str = "stock_prices",
+        tag_fields: list = ["symbol"],
+        time_field: str = "end_timestamp",
+    ) -> dict:
+        data = asdict(self)
+
+        tags = {field: data[field] for field in tag_fields if field in data}
+
+        time_value = int(data.get(time_field) * 1_000_000_000)
+
+        fields = {k: v for k, v in data.items() if k != time_field}
+
+        # Build the final JSON structure
+        influx_json = {
+            "measurement": measurement,
+            "tags": tags,
+            "time-field": time_value,
+        }
+        influx_json.update(fields)
+        return influx_json
+
 
 EquityAggSchema = class_schema(EquityAgg)
 
 
 def equity_agg_to_json(equity_agg: EquityAgg):
-    equity_agg_dict = asdict(equity_agg)
+    if is_dataclass(equity_agg):
+        equity_agg_dict = asdict(equity_agg)
+    elif isinstance(equity_agg, dict):
+        equity_agg_dict = equity_agg
+    else:
+        raise ValueError("Expected a dataclass instance or dict")
+
     return json.dumps(equity_agg_dict, indent=4).encode("utf-8")
 
 
@@ -107,12 +137,44 @@ class Article:
         if errors:
             raise ValidationError(f"Validation errors: {errors}")
 
+    def to_influx_json(
+        self,
+        measurement: str = "news_articles",
+        tag_fields: list = ["search"],
+        time_field: str = "webPublicationDate",
+    ) -> dict:
+        data = asdict(self)
+
+        tags = {field: data[field] for field in tag_fields if field in data}
+
+        time_value = data.get(time_field)
+        time_value = datetime.strptime(time_value, "%Y-%m-%dT%H:%M:%SZ").replace(
+            tzinfo=timezone.utc
+        )
+        time_value = int(time_value.timestamp() * 1_000_000)
+        fields = {k: v for k, v in data.items() if k != time_field}
+
+        # Build the final JSON structure
+        influx_json = {
+            "measurement": measurement,
+            "tags": tags,
+            "time-field": time_value,
+        }
+        influx_json.update(fields)
+        return influx_json
+
 
 ArticleSchema = class_schema(Article)
 
 
 def article_to_json(article: Article):
-    article_dict = asdict(article)
+    if is_dataclass(article):
+        article_dict = asdict(article)
+    elif isinstance(article, dict):
+        article_dict = article
+    else:
+        raise ValueError("Expected a dataclass instance or dict")
+
     return json.dumps(article_dict, indent=4).encode("utf-8")
 
 
