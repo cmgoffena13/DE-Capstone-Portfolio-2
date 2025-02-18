@@ -30,7 +30,9 @@ class PolygonStream:
                 current_app.logger.info("Local Config Initialized")
             else:
                 producer_conf = read_config()
-                current_app.logger.info("Confluent Config Initialized")
+                current_app.logger.info(
+                    f"Confluent Config Initialized: {producer_conf}"
+                )
         self.producer = Producer(producer_conf)
         self.TOPIC = TOPIC
 
