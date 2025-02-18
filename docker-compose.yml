@@ -59,7 +59,7 @@ services:
     hostname: jobmanager
     volumes:
       - ./website/scripts:/opt/src/job
-      - ./website/.env:/opt/src/job/.env
+      - ./website/.env:/opt/src/.env
       - ./flink/start_flink.sh:/opt/src/start_flink.sh
     ports:
       - 8081:8081
@@ -76,7 +76,7 @@ services:
       dockerfile: flink/Dockerfile
     container_name: taskmanager
     volumes:
-      - C:\Users\Cortl\repos\DE-Capstone-Portfolio-2\website\scripts:/opt/src/job
+      - ./website/scripts:/opt/src/job
     depends_on:
       - jobmanager
     environment:
