@@ -4,7 +4,7 @@ services:
       context: ./website
     container_name: producer
     ports:
-      - 8000:8000
+      - 6000:6000
 
   influxdb:
     image: influxdb:latest
