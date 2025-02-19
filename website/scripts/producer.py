@@ -49,7 +49,7 @@ class PolygonStream:
         for m in msg:
             # Convert to dataclass and validate
             equity_agg = EquityAgg(**m.__dict__)
-            
+
             with self.app.app_context():
                 if current_app.config["LOCAL"] == 0:
                     influx_payload = equity_agg.to_influx_json()
@@ -126,7 +126,7 @@ class GuardianAPI:
             )
             with self.app.app_context():
                 current_app.logger.info("Starting Guardian Stream...")
-            
+
             # Start an infinite loop
             while True:
                 data = fetch_with_retries(url=self.api_url, params=self.payload)
@@ -141,9 +141,7 @@ class GuardianAPI:
                         record["search"] = self.SEARCH
 
                         # Convert to dataclass and validate
-                        article = dict_to_article(
-                            record=record
-                        )
+                        article = dict_to_article(record=record)
 
                         with self.app.app_context():
                             if current_app.config["LOCAL"] == 0:
@@ -183,9 +181,7 @@ class GuardianAPI:
                             record["search"] = self.SEARCH
 
                             # Convert to dataclass and validate
-                            article = dict_to_article(
-                                record=record
-                            )
+                            article = dict_to_article(record=record)
 
                             with self.app.app_context():
                                 if current_app.config["LOCAL"] == 0:

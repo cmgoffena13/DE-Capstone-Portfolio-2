@@ -14,7 +14,7 @@ jobs:
           python-version: "3.10"
 
       - name: Install Dependencies
-        run: pip install isort black flake8
+        run: pip install isort black flake8 pytest
 
       - name: Run Continuous Integration - isort
         run: isort .
@@ -24,3 +24,6 @@ jobs:
 
       - name: Run Continuous Integation - flake8
         run: flake8 .
+
+      - name: Run Continuous Integreation - pytest
+        run: pytest --maxfail=1 --disable-warnings -q
