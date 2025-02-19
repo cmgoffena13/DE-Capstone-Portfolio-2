@@ -6,6 +6,7 @@ This project utilizes Polygon's live stream and The Guardian's API to showcase r
 ![linesofcode](https://aschey.tech/tokei/github/cmgoffena13/DE-Capstone-Portfolio-2?category=code)
 
 ![Stocks_Dashboard](website/app/static/README/stocks_dashboard.PNG "Website")
+<sup>Real-Time Dashboard - delayed by 15 minutes since I didn't want to pay to upgrade my Polygon subscription</sup>
 
 ## Technologies Used
  ![Kafka](https://img.shields.io/badge/-Kafka-231F20?style=flat&logoColor=white&logo=apachekafka)
@@ -376,6 +377,7 @@ Some more modifications I would make if I had the time:
 - Work on observability around the pipeline due to so many failure points
 - Look into the Guardian Blogs and see how to filter them out. Looks the publication date is really the update date.
 - I would add in schema registry for the topics. Given I already validate the records before sending them to Kafka using dataclasses and marshmallow, I didn't see it as a necessity for the initial project.
+- A cool idea I had is to grab the text of the articles and try and determine sentiment. Possibly displaying a sentiment score in the articles table on the dashboard.
 
 ## Conclusion
 Developing a streaming solution is incredibly complex, but highly satisfying when it works. I learned a lot while debugging this project; Having little to no exposure of Kafka, Flink, InfluxDB, and Grafana forced me to really challenge myself to move the project forward. Overall I learned a ton and realized Kafka itself has a lot of tools such as Kafka Connect that can replace Flink in simple cases. Cheers!
