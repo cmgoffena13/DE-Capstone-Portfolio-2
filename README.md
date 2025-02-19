@@ -230,7 +230,7 @@ One of the main issues I ran into while using the flask home page is when submit
 One of the challenges with The Guardian's API is that it only allowed to search through articles for a specific date. That means I could continuously query the API, micro-batching, but I would keep getting old results. I utilized the `webPublicationDate` timestamp field in the results to ensure only new articles were added to the kafka topic by maintaining a watermark timestamp and comparing the two fields.
 
 ### Data Quality - Marshmallow
-Data Quality Checks can be difficult with streaming data because most checks have to be row level. I decided to create a Marshmallow schema for each data source to ensure the schema and data types are checked. The second check for each is also incorporated by Marshmallow by ensuring the fields are Not None. I found a package called `marshmallow_dataclass` that allows a marshmallow schema to be created from a dataclass. Made it super easy. See below:
+Data Quality Checks can be difficult with streaming data because most checks have to be row level. I decided to create a Marshmallow schema for each data source to ensure the schema and data types are checked. The second check for each is also incorporated by Marshmallow by ensuring the fields are not missing or assigned as None. I found a package called `marshmallow_dataclass` that allows a marshmallow schema to be created from a dataclass. Made it super easy. See below:
 ```python
 @dataclass
 class EquityAgg:
