@@ -36,9 +36,16 @@ def test_article_creation_valid():
         assert getattr(article, key) == value
 
 
-def test_article_creation_invalid():
+def test_article_creation_data_type_invalid():
     data = valid_article_data()
     data["webPublicationDate"] = 1
+    with pytest.raises(ValidationError):
+        Article(**data)
+
+
+def test_article_creation_null_invalid():
+    data = valid_article_data()
+    data["webPublicationDate"] = None
     with pytest.raises(ValidationError):
         Article(**data)
 
@@ -127,9 +134,16 @@ def test_equity_agg_valid_creation():
         assert getattr(eq, key) == value
 
 
-def test_equity_agg_invalid_creation():
+def test_equity_agg_data_type_invalid_creation():
     data = valid_equity_agg_data()
     data["volume"] = "not an int"
+    with pytest.raises(ValidationError):
+        EquityAgg(**data)
+
+
+def test_equity_agg_null_invalid_creation():
+    data = valid_equity_agg_data()
+    data["volume"] = None
     with pytest.raises(ValidationError):
         EquityAgg(**data)
 
