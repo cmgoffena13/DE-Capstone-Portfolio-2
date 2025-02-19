@@ -409,4 +409,4 @@ Some more modifications I would make if I had the time:
 - A cool idea I had is to grab the text of the articles and try and determine sentiment. Possibly displaying a sentiment score in the articles table on the dashboard.
 
 ## Conclusion
-Developing a streaming solution is incredibly complex, but highly satisfying when it works. I learned a lot while debugging this project; Having little to no exposure of Kafka, Flink, InfluxDB, and Grafana forced me to really challenge myself to move the project forward. Overall I learned a ton and realized Kafka itself has a lot of tools such as Kafka Connect that can replace Flink in simple cases. Cheers!
+Developing a streaming solution is incredibly complex, but highly satisfying when it works. I learned a lot while working on this project; Having little to no exposure of Kafka, Flink, InfluxDB, and Grafana forced me to really challenge myself to move the project forward. Overall I learned a ton and realized Kafka itself has a lot of tools such as Kafka Connect that can replace Flink in simple cases. Cheers!
