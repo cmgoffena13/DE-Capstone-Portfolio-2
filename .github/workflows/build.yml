@@ -14,7 +14,7 @@ jobs:
           python-version: "3.10"
 
       - name: Install Dependencies
-        run: pip install isort black flake8 pytest
+        run: pip install isort black flake8 pytest marshmallow
 
       - name: Run Continuous Integration - isort
         run: isort .
