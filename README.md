@@ -260,6 +260,8 @@ class EquityAgg:
 EquityAggSchema = class_schema(EquityAgg)
 ```
 
+Ended up writing a lot of unit tests around this to ensure the checks were working!
+
 ## Kafka
 ![Kafka_UI](website/app/static/README/kafka_ui.PNG "Kafka_UI")
 <sup>The Kafka UI was very helpful in seeing the status of the cluster, topics, partitions, and the messages themselves while developing. I used the <a href="https://github.com/provectus/kafka-ui">free UI</a> developed by provectuslabs.</sup>
