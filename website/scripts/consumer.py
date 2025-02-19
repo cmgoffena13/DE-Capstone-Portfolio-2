@@ -172,23 +172,20 @@ def create_news_articles_source_kafka(t_env):
 
 def event_processing():
     env = StreamExecutionEnvironment.get_execution_environment()
-    # env.enable_checkpointing(10 * 1000)
+    env.enable_checkpointing(10 * 1000)
     env.set_parallelism(2)  # Can increase
 
     settings = EnvironmentSettings.new_instance().in_streaming_mode().build()
 
+    # Create Flink env, similar to Spark Context
     t_env = StreamTableEnvironment.create(env, environment_settings=settings)
 
     stock_prices_source_name = create_stock_prices_source_kafka(t_env=t_env)
     news_articles_source_name = create_news_articles_source_kafka(t_env=t_env)
 
-    # Convert Flink tables to data streams
+    # Declare tables
     stock_prices_table = t_env.from_path(stock_prices_source_name)
     news_articles_table = t_env.from_path(news_articles_source_name)
-
-    # result = t_env.execute_sql("""SELECT kafka_key FROM news_articles""")
-    # for row in result.collect():
-    #     logger.info(f"kafka key from flink table: {row}")
 
     # Declare stream schema (kind of lame)
     stock_prices_type_info = Types.ROW_NAMED(

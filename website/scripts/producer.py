@@ -47,8 +47,9 @@ class PolygonStream:
 
     def _handle_msg(self, msg: List[WebSocketMessage]):
         for m in msg:
-
+            # Convert to dataclass and validate
             equity_agg = EquityAgg(**m.__dict__)
+            
             with self.app.app_context():
                 if current_app.config["LOCAL"] == 0:
                     influx_payload = equity_agg.to_influx_json()
@@ -125,6 +126,7 @@ class GuardianAPI:
             )
             with self.app.app_context():
                 current_app.logger.info("Starting Guardian Stream...")
+            
             # Start an infinite loop
             while True:
                 data = fetch_with_retries(url=self.api_url, params=self.payload)
@@ -138,9 +140,11 @@ class GuardianAPI:
                         watermark = timestamp
                         record["search"] = self.SEARCH
 
+                        # Convert to dataclass and validate
                         article = dict_to_article(
                             record=record
-                        )  # convert to dataclass and validate
+                        )
+
                         with self.app.app_context():
                             if current_app.config["LOCAL"] == 0:
                                 article_payload = article.to_influx_json()
@@ -178,9 +182,10 @@ class GuardianAPI:
                             watermark = timestamp
                             record["search"] = self.SEARCH
 
+                            # Convert to dataclass and validate
                             article = dict_to_article(
                                 record=record
-                            )  # convert to dataclass and validate
+                            )
 
                             with self.app.app_context():
                                 if current_app.config["LOCAL"] == 0:
