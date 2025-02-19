@@ -65,7 +65,7 @@ This project utilizes Polygon's live stream and The Guardian's API to showcase r
 
 
 ## Introduction
-This portfolio project is designed to showcase my ability to learn new technologies in regards to streaming. Almost every technology chosen in this project I had limited knowledge in. Each section is commentary on the project that includes my learnings along the way. Enjoy!  
+This portfolio project is designed to showcase my ability to learn new technologies in regards to streaming. Almost every technology chosen in this project I had limited knowledge in. Each section is commentary on the project that includes my learnings along the way. I wanted to understand how the stock market can be emotionally driven by news articles that may impact perception about certain stocks, in real-time. Overall, I had a lot of fun. Enjoy!  
 
 To start my project I ended up investigating my data sources and building out the project locally using docker-compose. I later deployed the project to AWS and used Confluent for the streaming piece.
 
@@ -83,10 +83,10 @@ From a skillset perspective I am proficient in SQL and Python, which led me to c
  - **Docker**: great way to re-produce environments and easily create a development network using docker-compose.
 
 ## Initial Data Investigations - Polygon Websocket
-I am already subscribed to some polygon endpoints and with that subscription comes access to their 15 min delay websocket. Polygon is a great data resource that I was excited to use again.
+I am already subscribed to some Polygon endpoints and with that subscription comes access to their 15 min delay websocket. Polygon is a great data resource that I was excited to use again.
 
 ### Real-Time Websocket Feed
-Feed: <a href="">delayed.polygon.io</a>
+Feed: <a href="">delayed.Polygon.io</a>
 
 **Results**
 ```python
@@ -141,10 +141,10 @@ EquityAgg(
     - Whether ticker is otc or not. Came in as None sometimes.
 
 ## Initial Data Investigations - The Guardian API
-The guardian is a well-respected news outlet that focuses on the US. It offers a free API key for development/non-profit purposes. I've had my eye on The Guardian ever since they helped Edward Snowden get the word out about the NSA's surveillance activities. You can check out their platform <a href="https://open-platform.theguardian.com/">here</a>.
+The Guardian is a well-respected news outlet that focuses on the US. It offers a free API key for development/non-profit purposes. I've had my eye on The Guardian ever since they helped Edward Snowden get the word out about the NSA's surveillance activities. You can check out their platform <a href="https://open-platform.theGuardian.com/">here</a>.
 
 ### Content Endpoint
-URL: https://content.guardianapis.com/search
+URL: https://content.Guardianapis.com/search
 
 **Results**
 ```json
@@ -166,8 +166,8 @@ URL: https://content.guardianapis.com/search
         "sectionName": "Global development",
         "webPublicationDate": "2024-12-22T05:00:36Z",
         "webTitle": "Photographs reveal first glimpse of uncontacted Amazon community",
-        "webUrl": "https://www.theguardian.com/global-development/2024/dec/22/exclusive-photographs-reveal-first-glimpse-of-uncontacted-amazon-community-massaco",
-        "apiUrl": "https://content.guardianapis.com/global-development/2024/dec/22/exclusive-photographs-reveal-first-glimpse-of-uncontacted-amazon-community-massaco",
+        "webUrl": "https://www.theGuardian.com/global-development/2024/dec/22/exclusive-photographs-reveal-first-glimpse-of-uncontacted-amazon-community-massaco",
+        "apiUrl": "https://content.Guardianapis.com/global-development/2024/dec/22/exclusive-photographs-reveal-first-glimpse-of-uncontacted-amazon-community-massaco",
         "isHosted": False,
         "pillarId": "pillar/news",
         "pillarName": "News"
@@ -205,10 +205,10 @@ URL: https://content.guardianapis.com/search
     - This is the text input for the API call to query results. Used as the Kafka Key.
 
 ## Metrics
-The main metrics are from the polygon api, essentially the average of open, close, high, low so I can see the stock performance in real-time. In the future I could use a watermark in Flink and calculate the change percentage in 5-15 min interval to look for trade signals.
+The main metrics are from the Polygon API, essentially the average of open, close, high, low so I can see the stock performance in real-time. In the future I could use a watermark in Flink and calculate the change percentage in 5-15 min interval to look for trade signals.
 
 ## Website
-I decided early on that I wanted to create a web page to easily change the polygon and guardian query inputs. I ended up with a simple flask home page.
+I decided early on that I wanted to create a web page to easily change the Polygon and Guardian query inputs. I ended up with a simple flask home page.
 ![Website](website/app/static/README/stock_tracker.png "Website")
 <sup>Flask Website UI to control the Stream Tracking</sup>
 
@@ -259,8 +259,7 @@ class EquityAgg:
 
 EquityAggSchema = class_schema(EquityAgg)
 ```
-
-Ended up writing a lot of unit tests around this to ensure the checks were working!
+<sup>Ended up writing a lot of unit tests around this to ensure the checks were working!</sup>
 
 ## Kafka
 ![Kafka_UI](website/app/static/README/kafka_ui.PNG "Kafka_UI")
@@ -339,7 +338,7 @@ Time-series databases, at least InfluxDB, have a unique schema of three columns:
 ![Grafana_UI](website/app/static/README/grafana_ui.PNG "Grafana_UI")
 <sup>Dashboard Prototype</sup>
 
-Grafan was pretty intuitive to use as you could hook up a data source and then just use the language needed to query that data source. Ended up writing a simple InfluxDB Flux query to view the stock prices:
+Grafan was pretty intuitive to use as you could hook up a data source and then just use the language needed to query that data source. InfluxDB also had a timeRangeStart and Stop to be dynamic and in line with Grafana's visualization. Ended up writing a simple InfluxDB Flux query to view the stock prices:
 ```
 fieldList = ["high", "low"]
 
@@ -370,12 +369,12 @@ It was a pretty simple transition from the docker-compose to the cloud. Here wer
 - Using a custom sink became much more ambiguous since Confluent abstracts a lot of Flink away from the user
 
 ### Confluent
-When it comes to streaming I checked AWS's services regarding Flink and Kafka, but the smallest versions cost way too much for a simple project. I ended up going with Confluent since it made things so easy by providing serverless. They also offered a $400 credit in the first month of usage!
+When it comes to streaming I checked AWS's services regarding Flink and Kafka, but the smallest versions cost way too much for a simple project. I ended up going with Confluent since it made things so easy by providing serverless. They also offered a $400 credit in the first month of usage! Score.
 
 ### Kafka InfluxDB Connector
 I found that Kafka had an InfluxDB connector when messing with Confluent. I ended up pivoting away from Flink due to the simplicity of Kafka Connect. This required some restructing of the message in the kafka topics, but was well worth it to simplify the process. It took a lot of work to get Flink working locally, but having to create my own custom sink as a DataStream made me wonder how I would implement it on Confluent using Flink SQL. Luckily I didn't have to work that out.  
 
-There were some initial errors with the records and I found that during an error the sink connector will create a dql topc, `Dead Letter Queue`, which held the failed records. It was cool to see the thought out reliability.
+There were some initial errors with the records and I found that during an error the sink connector will create a dql topc, `Dead Letter Queue`, which held the failed records. It was cool to see the thought-out reliability of making sure no data was lost.
 
 ### Confluent Lineage
 I found that confluent supports stream lineage, which was really cool to see where records were coming from and where they were going.
@@ -383,7 +382,7 @@ I found that confluent supports stream lineage, which was really cool to see whe
 ![Confluent_Lineage](website/app/static/README/confluent_lineage.PNG "Confluent_Lineage")
 
 ### Additional Cloud Deployment Pictures
-One of the requirements for this project was working in the cloud, so providing pictures as proof.  
+One of the requirements for this project (I made this during Zach Wilson's Paid Bootcamp) was working in the cloud, so providing pictures as proof.  
 
 ![Confluent_Topic](website/app/static/README/confluent_topic.PNG "Confluent_Topic")  
 <sup>Confluent Topic</sup>
