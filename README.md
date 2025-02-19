@@ -54,10 +54,11 @@ This project utilizes Polygon's live stream and The Guardian's API to showcase r
 10. [Grafana](#Grafana)
     1. [Annotations](#Annotations)
 11. [Deployment](#Deployment)
-    1. [Kafka InfluxDB Connector](#Kafka-InfluxDB-Connector)
-    2. [Confluent Lineage](#Confluent-Lineage)
-    3. [Additional Cloud Deployment Pictures](#Additional-Cloud-Deployment-Pictures)
-    4. [SSH](#SSH)
+    1. [Confluent](#Confluent)
+    2. [Kafka InfluxDB Connector](#Kafka-InfluxDB-Connector)
+    3. [Confluent Lineage](#Confluent-Lineage)
+    4. [Additional Cloud Deployment Pictures](#Additional-Cloud-Deployment-Pictures)
+    5. [SSH](#SSH)
 12. [Thoughts](#Thoughts)
 13. [Conclusion](#Conclusion)
 
@@ -337,6 +338,8 @@ It was a pretty simple transition from the docker-compose to the cloud. Here wer
 - Becoming familiar with the Confluent UI
 - Using a custom sink became much more ambiguous since Confluent abstracts a lot of Flink away from the user
 
+### Confluent
+When it comes to streaming I checked AWS's services regarding Flink and Kafka, but the smallest versions cost way too much for a simple project. I ended up going with Confluent since it made things so easy by providing serverless. They also offered a $400 credit in the first month of usage!
 
 ### Kafka InfluxDB Connector
 I found that Kafka had an InfluxDB connector when messing with Confluent. I ended up pivoting away from Flink due to the simplicity of Kafka Connect. This required some restructing of the message in the kafka topics, but was well worth it to simplify the process. It took a lot of work to get Flink working locally, but having to create my own custom sink as a DataStream made me wonder how I would implement it on Confluent using Flink SQL. Luckily I didn't have to work that out.  
