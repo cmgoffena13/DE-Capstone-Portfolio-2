@@ -39,15 +39,14 @@ This project utilizes Polygon's live stream and The Guardian's API to showcase r
     1. [Threading](#Threading)
     2. [API Watermarking](#API-Watermarking)
     3. [Data Quality - Marshmallow](#Data-Quality---Marshmallow)
-7. [Kafka](#Kafak)
-    1. [Kraft Mode](#Kraft-Mode)
+7. [Kafka](#Kafka)
+    1. [Kraft Mode - Local](#Kraft-Mode---Local)
     2. [Topics](#Topics)
     3. [Keys / Partitions](#Keys-/-Partitions)
-    4. [Kafka Debugging](#Kafka-Debugging)
 8. [Flink](#Flink)
     1. [Flink Tables](#Flink-Tables)
     2. [Flink DataStreams](#Flink-DataStreams)
-    3. [Flink Debugging](#Flink-Debugging)
+    3. [Flink Debugging - Local](#Flink-Debugging---Local)
 9. [InfluxDB](#InfluxDB)
     1. [Point Schema](#Point-Schema)
     2. [Flink Custom Sink](#Custom-Sink)
@@ -57,12 +56,16 @@ This project utilizes Polygon's live stream and The Guardian's API to showcase r
 11. [Deployment](#Deployment)
     1. [Kafka InfluxDB Connector](#Kafka-InfluxDB-Connector)
     2. [Confluent Lineage](#Confluent-Lineage)
+    3. [Additional Cloud Deployment Pictures](#Additional-Cloud-Deployment-Pictures)
+    4. [SSH](#SSH)
 12. [Thoughts](#Thoughts)
 13. [Conclusion](#Conclusion)
 
 
 ## Introduction
-This portfolio project is designed to showcase my ability to learn new technologies in regards to streaming. Almost every technology chosen in this project I had limited knowledge in. Each section is commentary on the project that includes my learnings along the way. Enjoy!
+This portfolio project is designed to showcase my ability to learn new technologies in regards to streaming. Almost every technology chosen in this project I had limited knowledge in. Each section is commentary on the project that includes my learnings along the way. Enjoy!  
+
+To start my project I ended up investigating my data sources and building out the project locally using docker-compose. I later deployed the project to AWS and used Confluent for the streaming piece.
 
 ## Technology Choices
 From a skillset perspective I am proficient in SQL and Python, which led me to choose these tools:
@@ -106,20 +109,20 @@ EquityAgg(
 <sup>Initial Thoughts: Given the start and end timestamps of the aggregation, can use the end timestamp as a watermark. Can see whether price went up or down during the time period as well. Aggregation is over a time frame of 1 minute. Noticed that the decimal placement can go pretty long.</sup>
 
 ### Polygon Data Dictionary
-- `symbol` STRING - symbol ticker of the company
-- `volume` INTEGER - volume traded within the 1 minute interval
-- `accumulated_volume` INTEGER - Accumulated volume for the day
-- `official_open_price` FLOAT - Open stock price of the day
-- `vwap` FLOAT - Volume Weighted Average Price
-- `open` FLOAT - Open stock price of 1 minute interval
-- `close` FLOAT - Close stock price of 1 minute interval
-- `high` FLOAT - High stock price of 1 minute interval
-- `low` FLOAT - Low stock rice of 1 minute interval
-- `aggregate_vwap` FLOAT - Volume Weighted Average Price of the 1 minute interval
-- `average_size` INTEGER - Average trade size of the 1 minute interval
-- `start_timestamp` INTEGER - Epoch timestamp showing start of 1 minute interval
-- `end_timestamp` INTEGER - Epoch timestamp showing end of 1 minute interval
-- `otc` BOOLEAN - Whether ticker is otc or not
+- `symbol` STRING NOT NULL - symbol ticker of the company
+- `volume` INTEGER NOT NULL - volume traded within the 1 minute interval
+- `accumulated_volume` INTEGER NOT NULL - Accumulated volume for the day
+- `official_open_price` FLOAT NOT NULL - Open stock price of the day
+- `vwap` FLOAT NOT NULL - Volume Weighted Average Price
+- `open` FLOAT NOT NULL - Open stock price of 1 minute interval
+- `close` FLOAT NOT NULL - Close stock price of 1 minute interval
+- `high` FLOAT NOT NULL - High stock price of 1 minute interval
+- `low` FLOAT NOT NULL - Low stock rice of 1 minute interval
+- `aggregate_vwap` FLOAT NOT NULL - Volume Weighted Average Price of the 1 minute interval
+- `average_size` INTEGER NOT NULL - Average trade size of the 1 minute interval
+- `start_timestamp` INTEGER NOT NULL - Epoch timestamp showing start of 1 minute interval
+- `end_timestamp` INTEGER NOT NULL - Epoch timestamp showing end of 1 minute interval
+- `otc` BOOLEAN NULL - Whether ticker is otc or not. Came in as None sometimes.
 
 ## Initial Data Investigations - The Guardian API
 The guardian is a well-respected news outlet that focuses on the US. It offers a free API key for development/non-profit purposes. I've had my eye on The Guardian ever since they helped Edward Snowden get the word out about the NSA's surveillance activities. You can check out their platform <a href="https://open-platform.theguardian.com/">here</a>.
@@ -160,18 +163,18 @@ URL: https://content.guardianapis.com/search
 <sup>Initial thoughts: webTitle and webPublicationDate seem to be the most important data points. Status is important as well to check. Also have to be careful about search terms, I wanted the ecommerce Amazon, not the jungle. Looks like their is a sectionName that can be filtered for US activity only</sup>
 
 ### Guardian Data Dictionary
-- `id` STRING - Domain Endpoint; ID of the article
-- `type` STRING - Type of published material ex. Article, Blog
-- `sectionId` STRING - ID of section
-- `sectionName` STRING - Proper name of section, low level category
-- `webPublicationDate` DATETIME(3) - Datetime in UTC when article was published/updated
-- `webTitle` STRING - Title of the article
-- `webUrl` STRING - URL link to the article on Guardian.com, html content
-- `apiUrl` STRING - Programmatic address, very similar to URL link, raw content
-- `isHosted` BOOLEAN - Whether the article is hosted by the Guardian or not
-- `pillarId` STRING - ID of pillar
-- `pillarName` STRING - Proper name of pillar, high level category
-- `search` STRING - This is the text input for the API call to query results. Used as the Kafka Key.
+- `id` STRING NOT NULL - Domain Endpoint; ID of the article
+- `type` STRING NOT NULL - Type of published material ex. Article, Blog
+- `sectionId` STRING NOT NULL - ID of section
+- `sectionName` STRING NOT NULL - Proper name of section, low level category
+- `webPublicationDate` STRING NOT NULL - Datetime in UTC when article was published/updated. Converted to INT NOT NULL epoch timestamp for InfluxDB.
+- `webTitle` STRING NOT NULL - Title of the article
+- `webUrl` STRING NOT NULL - URL link to the article on Guardian.com, html content
+- `apiUrl` STRING NOT NULL - Programmatic address, very similar to URL link, raw content
+- `isHosted` BOOLEAN NOT NULL - Whether the article is hosted by the Guardian or not
+- `pillarId` STRING NOT NULL - ID of pillar
+- `pillarName` STRING NOT NULL - Proper name of pillar, high level category
+- `search` STRING NOT NULL - This is the text input for the API call to query results. Used as the Kafka Key.
 
 ## Metrics
 The main metrics are from the polygon api, essentially the average of open, close, high, low so I can see the stock performance in real-time. In the future I could use a watermark in Flink and calculate the change percentage in 5-15 min interval to look for trade signals.
@@ -179,6 +182,7 @@ The main metrics are from the polygon api, essentially the average of open, clos
 ## Website
 I decided early on that I wanted to create a web page to easily change the polygon and guardian query inputs. I ended up with a simple flask home page.
 ![Website](website/app/static/README/stock_tracker.png "Website")
+<sup>Flask Website UI to control the Stream Tracking</sup>
 
 ### Threading
 One of the main issues I ran into while using the flask home page is when submitting a form, the websocket held the main python thread, which never ended up reloading the page. I ended up with a simple solution to create a background thread for the websocket to have the web page load properly after a form submission.
@@ -230,8 +234,9 @@ EquityAggSchema = class_schema(EquityAgg)
 
 ## Kafka
 ![Kafka_UI](website/app/static/README/kafka_ui.PNG "Kafka_UI")
+<sup>The Kafka UI was very helpful in seeing the status of the cluster, topics, partitions, and the messages themselves while developing. I used the <a href="https://github.com/provectus/kafka-ui">free UI</a> developed by provectuslabs.</sup>
 
-### Kraft Mode
+### Kraft Mode - Local
 A Kafka cluster is traditionally managed by Zookeeper, but Kafka recently came out with K-raft mode, which allows a number of Kafka brokers to be a `controller`. One of these brokers is elected as the leader, which coordinates the cluster and ensures proper failover.
 
 ### Topics
@@ -240,13 +245,11 @@ Kafka Topics are used to logically split up the data that Kafka stores. I create
 ### Keys / Partitions
 Kafka Partitioning allows for the splitting up of topics for parallelism and scalability. An optional identifier for a partition within a topic can be created/assigned as a key. The stock `symbol` or the `search` term was assigned as the key to ensure that data was being logically divided as a partition. This also allowed me to grab the partition key during Flink processing to properly tag the time-series data.
 
-### Kafka Debugging
-The Kafka UI was very helpful in seeing the status of the cluster, topics, partitions, and the messages themselves while developing. I used the <a href="https://github.com/provectus/kafka-ui">free UI</a> developed by provectuslabs.
-
 ## Flink
 I ended up having one Flink job to process the data from the Kafka Topics and insert it into InfluxDB. In retrospect, it makes sense to split up the tasks into multiple Flink jobs to minimize points of failure and unnecessary dependencies.
 
 ![Flink_UI](website/app/static/README/flink_ui.PNG "Flink_UI")
+<sup>Local Flask UI</sup>
 
 ### Flink Tables
 Flink Tables are a higher level abstraction that allows Flink to treat a data stream similar to a table and enables the use of Flink SQL. Flink Tables can only be used with official connectors. When both the source and sink are official connectors simple SQL statements can be used such as the below:
@@ -260,9 +263,9 @@ FROM {table_source}
 ```
 
 ### Flink DataStreams
-Flink DataStreams are a lower level abstraction that allows for more fine-tuning and complex operations. I ended up having to utilize DataStreams when I created a custom sink for InfluxDB. I ended up having tables for my sources to simplify, which I then converted to a DataStream to utilize my custom sink / insert. An interesting annoyance is when converting to a DataStream you have to declare the DataStream schema as well, even if it is converted from a Table. So I had to declare the schema twice, in two different formats, to utilize the custom sink. 
+Flink DataStreams are a lower level abstraction that allows for more fine-tuning and complex operations. DataStreams have to be used if Flink does not have an official connector, which unfortunately, I found out InfluxDB did not have one. I ended up having to utilize DataStreams to create a custom sink for InfluxDB. I ended up having tables for my sources to simplify, which I then converted to a DataStream to utilize my custom sink / insert. An interesting annoyance is when converting to a DataStream you have to declare the DataStream schema as well, even if it is converted from a Table. So I had to declare the schema twice, in two different formats, to utilize the custom sink. 
 
-### Flink Debugging
+### Flink Debugging - Local
 Debugging Flink proved quite challenging due to not being able to run locally. Due to its distributed processing framework, a cluster needed spun up and the flink job submitted to test the job. A lot of logging was required to pinpoint the issues. The logging statements would show up in `jobmanager` if it dealt with SQL syntax or startup issues and in `taskmanager` if it dealt with the data processing. These can be viewed in docker or in the Flink UI.  
 
 ## InfluxDB
@@ -327,17 +330,38 @@ from(bucket: "events")
 I also ended up adding a table below the graph so it is easy to quickly see all the articles that came out and give the URLs for more deep-dives.
 
 ## Deployment
-For deployment, Kafka and Flink were pushed off onto Confluent. I deployed the producer/website to an AWS EC2 instance and had it send messages to Kafka, processed through serverless Flink, and then inserted into InfluxDB on the same EC2 instance. I could then view the Grafana dashboard by using ssh and linking the grafana port to my local port.  
+For deployment, the plan was to have Kafka and Flink pushed off onto Confluent. The producer/website could be on AWS EC2 instance and it would send messages to Confluent/Kafka, processed through serverless Flink, and then inserted back into InfluxDB on the same EC2 instance. I could then view the Grafana dashboard by using ssh and linking the grafana port to my local port.  
 
 It was a pretty simple transition from the docker-compose to the cloud. Here were a couple of things that needed addressed: 
 - Exposing the right ports for the EC2 server to produce the kafka messages appropriately and have the flink job insert back into InfluxDB
 - Becoming familiar with the Confluent UI
+- Using a custom sink became much more ambiguous since Confluent abstracts a lot of Flink away from the user
 
 
 ### Kafka InfluxDB Connector
-I found that Kafka had an InfluxDB connector when messing with Confluent. I ended up pivoting away from Flink due to the simplicity of Kafka Connect. This required some restructing of the message in the kafka topics, but was well worth it to simplify the process.
+I found that Kafka had an InfluxDB connector when messing with Confluent. I ended up pivoting away from Flink due to the simplicity of Kafka Connect. This required some restructing of the message in the kafka topics, but was well worth it to simplify the process. It took a lot of work to get Flink working locally, but having to create my own custom sink as a DataStream made me wonder how I would implement it on Confluent using Flink SQL. Luckily I didn't have to work that out.  
+
+There were some initial errors with the records and I found that during an error the sink connector will create a dql topc, `Dead Letter Queue`, which held the failed records. It was cool to see the thought out reliability.
 
 ### Confluent Lineage
+I found that confluent supports stream lineage, which was really cool to see where records were coming from and where they were going.
+
+![Confluent_Lineage](website/app/static/README/confluent_lineage.PNG "Confluent_Lineage")
+
+### Additional Cloud Deployment Pictures
+One of the requirements for this project was working in the cloud, so providing pictures as proof.  
+
+Confluent Topic
+![Confluent_Topic](website/app/static/README/confluent_topic.PNG "Confluent_Topic")  
+
+Kafka Sink Connector
+![Confluent_Sink_Connector](website/app/static/README/sink_connector.PNG "Confluent_Sink_Connector")  
+
+### SSH
+I ended up using SSH to connect to my EC2 instance and linking the ports to utilize the InfluxDB, Input Website, and Grafana UIs. Sample code below:
+```bash
+ssh -i <key_path> -L 3000:localhost:3000 -L 8001:localhost:8001 -L 8086:localhost:8086 <user>@<ip_address>
+```
 
 ## Thoughts 
 One aspect of this project that I would do differently is try and separate the flink processing from the website and move it all into its own folder to separate dependencies. I would also split up the flink job into multiple jobs. That way the producers and consumers are separated and can scale as needed.  
@@ -348,5 +372,7 @@ Some more modifications I would make if I had the time:
 - Find a scalable way to setup alerts in Grafana to trigger if some stock prices go above or below a certain point
 - Work on observability around the pipeline due to so many failure points
 - Look into the Guardian Blogs and see how to filter them out. Looks the publication date is really the update date.
+- I would add in schema registry for the topics. Given I already validate the records before sending them to Kafka using dataclasses and marshmallow, I didn't see it as a necessity for the initial project.
+
 ## Conclusion
-Developing a streaming solution is incredibly complex, but highly satisfying when it works. I learned a lot while debugging this project; Having little to no exposure of Kafka, Flink, InfluxDB, and Grafana forced me to really challenge myself to move the project forward. Overall I learned a ton.
+Developing a streaming solution is incredibly complex, but highly satisfying when it works. I learned a lot while debugging this project; Having little to no exposure of Kafka, Flink, InfluxDB, and Grafana forced me to really challenge myself to move the project forward. Overall I learned a ton and realized Kafka itself has a lot of tools such as Kafka Connect that can replace Flink in simple cases. Cheers!
