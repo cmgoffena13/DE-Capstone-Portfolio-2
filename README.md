@@ -407,6 +407,7 @@ Some more modifications I would make if I had the time:
 - Look into the Guardian Blogs and see how to filter them out. Looks the publication date is really the update date.
 - I would add in schema registry for the topics. Given I already validate the records before sending them to Kafka using dataclasses and marshmallow, I didn't see it as a necessity for the initial project.
 - A cool idea I had is to grab the text of the articles and try and determine sentiment. Possibly displaying a sentiment score in the articles table on the dashboard.
+- I'm not sure but I think Pydantic could replace my dataclass/marshmallow schema data quality checks. Need to look further into it.
 
 ## Conclusion
 Developing a streaming solution is incredibly complex, but highly satisfying when it works. I learned a lot while working on this project; Having little to no exposure of Kafka, Flink, InfluxDB, and Grafana forced me to really challenge myself to move the project forward. Overall I learned a ton and realized Kafka itself has a lot of tools such as Kafka Connect that can replace Flink in simple cases. Cheers!
