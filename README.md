@@ -111,20 +111,34 @@ EquityAgg(
 <sup>Initial Thoughts: Given the start and end timestamps of the aggregation, can use the end timestamp as a watermark. Can see whether price went up or down during the time period as well. Aggregation is over a time frame of 1 minute. Noticed that the decimal placement can go pretty long.</sup>
 
 ### Polygon Data Dictionary
-- `symbol` STRING NOT NULL - symbol ticker of the company
-- `volume` INTEGER NOT NULL - volume traded within the 1 minute interval
-- `accumulated_volume` INTEGER NOT NULL - Accumulated volume for the day
-- `official_open_price` FLOAT NOT NULL - Open stock price of the day
-- `vwap` FLOAT NOT NULL - Volume Weighted Average Price
-- `open` FLOAT NOT NULL - Open stock price of 1 minute interval
-- `close` FLOAT NOT NULL - Close stock price of 1 minute interval
-- `high` FLOAT NOT NULL - High stock price of 1 minute interval
-- `low` FLOAT NOT NULL - Low stock rice of 1 minute interval
-- `aggregate_vwap` FLOAT NOT NULL - Volume Weighted Average Price of the 1 minute interval
-- `average_size` INTEGER NOT NULL - Average trade size of the 1 minute interval
-- `start_timestamp` INTEGER NOT NULL - Epoch timestamp showing start of 1 minute interval
-- `end_timestamp` INTEGER NOT NULL - Epoch timestamp showing end of 1 minute interval
-- `otc` BOOLEAN NULL - Whether ticker is otc or not. Came in as None sometimes.
+- `symbol` STRING NOT NULL
+    - Symbol ticker of the company
+- `volume` INTEGER NOT NULL
+    - Volume traded within the 1 minute interval
+- `accumulated_volume` INTEGER NOT NULL
+    - Accumulated volume for the day
+- `official_open_price` FLOAT NOT NULL
+    - Open stock price of the day
+- `vwap` FLOAT NOT NULL
+    - Volume Weighted Average Price
+- `open` FLOAT NOT NULL
+    - Open stock price of 1 minute interval
+- `close` FLOAT NOT NULL
+    - Close stock price of 1 minute interval
+- `high` FLOAT NOT NULL
+    - High stock price of 1 minute interval
+- `low` FLOAT NOT NULL
+    - Low stock rice of 1 minute interval
+- `aggregate_vwap` FLOAT NOT NULL
+    - Volume Weighted Average Price of the 1 minute interval
+- `average_size` INTEGER NOT NULL
+    - Average trade size of the 1 minute interval
+- `start_timestamp` INTEGER NOT NULL
+    - Epoch timestamp showing start of 1 minute interval
+- `end_timestamp` INTEGER NOT NULL
+    - Epoch timestamp showing end of 1 minute interval
+- `otc` BOOLEAN NULL
+    - Whether ticker is otc or not. Came in as None sometimes.
 
 ## Initial Data Investigations - The Guardian API
 The guardian is a well-respected news outlet that focuses on the US. It offers a free API key for development/non-profit purposes. I've had my eye on The Guardian ever since they helped Edward Snowden get the word out about the NSA's surveillance activities. You can check out their platform <a href="https://open-platform.theguardian.com/">here</a>.
@@ -162,21 +176,33 @@ URL: https://content.guardianapis.com/search
   }
 }
 ```
-<sup>Initial thoughts: webTitle and webPublicationDate seem to be the most important data points. Status is important as well to check. Also have to be careful about search terms, I wanted the ecommerce Amazon, not the jungle. Looks like their is a sectionName that can be filtered for US activity only</sup>
+<sup>Initial thoughts: webTitle and webPublicationDate seem to be the most important data points. Status is important as well to check. Also have to be careful about search terms, I wanted the ecommerce Amazon, not the jungle. Looks like there is a sectionName that can be filtered for US activity only</sup>
 
 ### Guardian Data Dictionary
-- `id` STRING NOT NULL - Domain Endpoint; ID of the article
-- `type` STRING NOT NULL - Type of published material ex. Article, Blog
-- `sectionId` STRING NOT NULL - ID of section
-- `sectionName` STRING NOT NULL - Proper name of section, low level category
-- `webPublicationDate` STRING NOT NULL - Datetime in UTC when article was published/updated. Converted to INT NOT NULL epoch timestamp for InfluxDB.
-- `webTitle` STRING NOT NULL - Title of the article
-- `webUrl` STRING NOT NULL - URL link to the article on Guardian.com, html content
-- `apiUrl` STRING NOT NULL - Programmatic address, very similar to URL link, raw content
-- `isHosted` BOOLEAN NOT NULL - Whether the article is hosted by the Guardian or not
-- `pillarId` STRING NOT NULL - ID of pillar
-- `pillarName` STRING NOT NULL - Proper name of pillar, high level category
-- `search` STRING NOT NULL - This is the text input for the API call to query results. Used as the Kafka Key.
+- `id` STRING NOT NULL
+    - Domain Endpoint; ID of the article
+- `type` STRING NOT NULL
+    - Type of published material ex. Article, Blog
+- `sectionId` STRING NOT NULL
+    - ID of section
+- `sectionName` STRING NOT NULL
+    - Proper name of section, low level category
+- `webPublicationDate` STRING NOT NULL
+    - Datetime in UTC when article was published/updated. Converted to INT NOT NULL epoch timestamp for InfluxDB.
+- `webTitle` STRING NOT NULL
+    - Title of the article
+- `webUrl` STRING NOT NULL
+    - URL link to the article on Guardian.com, html content
+- `apiUrl` STRING NOT NULL
+    - Programmatic address, very similar to URL link, raw content
+- `isHosted` BOOLEAN NOT NULL
+    - Whether the article is hosted by the Guardian or not
+- `pillarId` STRING NOT NULL
+    - ID of pillar
+- `pillarName` STRING NOT NULL
+    - Proper name of pillar, high level category
+- `search` STRING NOT NULL
+    - This is the text input for the API call to query results. Used as the Kafka Key.
 
 ## Metrics
 The main metrics are from the polygon api, essentially the average of open, close, high, low so I can see the stock performance in real-time. In the future I could use a watermark in Flink and calculate the change percentage in 5-15 min interval to look for trade signals.
@@ -251,7 +277,7 @@ Kafka Partitioning allows for the splitting up of topics for parallelism and sca
 I ended up having one Flink job to process the data from the Kafka Topics and insert it into InfluxDB. In retrospect, it makes sense to split up the tasks into multiple Flink jobs to minimize points of failure and unnecessary dependencies.
 
 ![Flink_UI](website/app/static/README/flink_ui.PNG "Flink_UI")
-<sup>Local Flask UI</sup>
+<sup>Local Flink UI</sup>
 
 ### Flink Tables
 Flink Tables are a higher level abstraction that allows Flink to treat a data stream similar to a table and enables the use of Flink SQL. Flink Tables can only be used with official connectors. When both the source and sink are official connectors simple SQL statements can be used such as the below:
@@ -273,6 +299,7 @@ Debugging Flink proved quite challenging due to not being able to run locally. D
 ## InfluxDB
 
 ![InfluxDB_UI](website/app/static/README/influxdb_ui.PNG "InfluxDB_UI")
+<sup>InfluxDB UI</sup>
 
 ### Point Schema
 InfluxDB intakes a Point, which has a time in unix nanoseconds, multiple tags and multiple labels. It is important to make sure numbers were properly casted so that they could be visualized appropriately. I developed some code to transform the Flink Row into an InfluxDB Point:
@@ -308,6 +335,7 @@ Time-series databases, at least InfluxDB, have a unique schema of three columns:
 ## Grafana
 
 ![Grafana_UI](website/app/static/README/grafana_ui.PNG "Grafana_UI")
+<sup>Dashboard Prototype</sup>
 
 Grafan was pretty intuitive to use as you could hook up a data source and then just use the language needed to query that data source. Ended up writing a simple InfluxDB Flux query to view the stock prices:
 ```
@@ -355,11 +383,11 @@ I found that confluent supports stream lineage, which was really cool to see whe
 ### Additional Cloud Deployment Pictures
 One of the requirements for this project was working in the cloud, so providing pictures as proof.  
 
-Confluent Topic
 ![Confluent_Topic](website/app/static/README/confluent_topic.PNG "Confluent_Topic")  
+<sup>Confluent Topic</sup>
 
-Kafka Sink Connector
-![Confluent_Sink_Connector](website/app/static/README/sink_connector.PNG "Confluent_Sink_Connector")  
+![Confluent_Sink_Connector](website/app/static/README/sink_connector.PNG "Confluent_Sink_Connector") 
+<sup>Kafka Sink Connector</sup> 
 
 ### SSH
 I ended up using SSH to connect to my EC2 instance and linking the ports to utilize the InfluxDB, Input Website, and Grafana UIs. Sample code below:
